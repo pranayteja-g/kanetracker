@@ -1,0 +1,44 @@
+<div class="transactions-container">
+  <h1 class="page-title">Transactions</h1>
+  
+  <div class="transactions-list" *ngIf="transactions.length; else noData">
+    <div 
+      *ngFor="let tx of transactions" 
+      class="transaction-card"
+      [style.background]="hexToRgba(getCategoryColor(tx.category))">
+      
+      <div class="transaction-header">
+        <div class="category-info">
+          <div 
+            class="category-dot"
+            [style.background]="getCategoryColor(tx.category)">
+          </div>
+          <span class="category-name">{{ tx.category }}</span>
+        </div>
+        <div class="transaction-amount" [ngClass]="tx.type">
+          <span class="currency">{{ tx.type === 'income' ? '+' : '-' }}{{ tx.amount | currency }}</span>
+          <mat-icon class="type-icon">{{ tx.type === 'income' ? 'trending_up' : 'trending_down' }}</mat-icon>
+        </div>
+      </div>
+      
+      <div class="transaction-details">
+        <p class="description">{{ tx.description || 'No description' }}</p>
+        <span class="date">{{ tx.date | date:'MMM dd, yyyy' }}</span>
+      </div>
+      
+      <div class="transaction-actions">
+        <button mat-icon-button class="delete-btn" (click)="deleteTransaction(tx.id)">
+          <mat-icon>delete_outline</mat-icon>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <ng-template #noData>
+    <div class="no-data">
+      <mat-icon class="no-data-icon">receipt_long</mat-icon>
+      <p>No transactions yet</p>
+      <span>Your transactions will appear here once you start logging them.</span>
+    </div>
+  </ng-template>
+</div>

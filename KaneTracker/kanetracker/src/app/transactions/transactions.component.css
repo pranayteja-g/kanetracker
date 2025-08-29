@@ -1,0 +1,162 @@
+.transactions-container {
+  padding: 24px;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.page-title {
+  font-size: 2rem;
+  font-weight: 600;
+  color: #1976d2;
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.transactions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.transaction-card {
+  border-radius: 12px;
+  padding: 20px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+  position: relative;
+  backdrop-filter: blur(10px);
+}
+
+.transaction-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  border-color: rgba(0, 0, 0, 0.12);
+}
+
+.transaction-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.category-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.category-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.category-name {
+  font-weight: 600;
+  font-size: 1.1rem;
+  color: #333;
+}
+
+.transaction-amount {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 1.2rem;
+}
+
+.transaction-amount.income {
+  color: #4caf50;
+}
+
+.transaction-amount.expense {
+  color: #f44336;
+}
+
+.type-icon {
+  font-size: 20px;
+}
+
+.transaction-details {
+  margin-bottom: 16px;
+}
+
+.description {
+  margin: 0 0 8px 0;
+  color: #555;
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+
+.date {
+  color: #888;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.transaction-actions {
+  display: flex;
+  justify-content: flex-end;
+  position: absolute;
+  top: 16px;
+  right: 16px;
+}
+
+.delete-btn {
+  color: #f44336;
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
+}
+
+.delete-btn:hover {
+  opacity: 1;
+  background-color: rgba(244, 67, 54, 0.1);
+}
+
+.no-data {
+  text-align: center;
+  padding: 60px 20px;
+  color: #666;
+}
+
+.no-data-icon {
+  font-size: 64px;
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+.no-data p {
+  font-size: 1.2rem;
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+.no-data span {
+  font-size: 0.9rem;
+  opacity: 0.7;
+}
+
+/* Responsive design */
+@media (max-width: 600px) {
+  .transactions-container {
+    padding: 16px;
+  }
+  
+  .transaction-card {
+    padding: 16px;
+  }
+  
+  .transaction-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  
+  .transaction-actions {
+    position: static;
+    justify-content: center;
+    margin-top: 12px;
+  }
+}
