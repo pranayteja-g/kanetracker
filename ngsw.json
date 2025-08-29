@@ -1,6 +1,6 @@
 {
   "configVersion": 1,
-  "timestamp": 1756489347921,
+  "timestamp": 1756493323930,
   "index": "/kanetracker/index.html",
   "assetGroups": [
     {
@@ -13,7 +13,7 @@
       "urls": [
         "/kanetracker/favicon.ico",
         "/kanetracker/index.html",
-        "/kanetracker/main-H2A57WDJ.js",
+        "/kanetracker/main-UGGOMAO6.js",
         "/kanetracker/manifest.webmanifest",
         "/kanetracker/polyfills-B6TNHZQ6.js",
         "/kanetracker/styles-BY7DEGSE.css"
@@ -51,8 +51,8 @@
     "/kanetracker/icons/icon-512x512.png": "1de182f76f7329dfa8f9fcdd1fdcdd695bea6a99",
     "/kanetracker/icons/icon-72x72.png": "aa88a6096bd973be7f6d7a5489bfa6bc2463f8c4",
     "/kanetracker/icons/icon-96x96.png": "7fb8f59c30ce2ff12c700321a0b39e14b3dc8f95",
-    "/kanetracker/index.html": "5f068fdc8d0a6771a543f973adf95ba2d5e7fbb1",
-    "/kanetracker/main-H2A57WDJ.js": "299fc9a7ff40f8079c50fe898ba805db04d95586",
+    "/kanetracker/index.html": "0b374cc16613d565107631ab1923593e92075342",
+    "/kanetracker/main-UGGOMAO6.js": "0dd9c52e037729a3023c3f3635951d686d4ac75a",
     "/kanetracker/manifest.webmanifest": "e98040785b8de1e082a218ed0a0da4f352735837",
     "/kanetracker/polyfills-B6TNHZQ6.js": "bf76ac291d7f51c1139b7edcf86b359a30c08c64",
     "/kanetracker/styles-BY7DEGSE.css": "5ba2c110456d2cdc8181db900e6c73269a78ba3c"
