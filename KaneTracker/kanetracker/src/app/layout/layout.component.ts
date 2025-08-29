@@ -13,7 +13,6 @@ import { MatIconModule } from '@angular/material/icon';
       <main class="main-content">
         <router-outlet></router-outlet>
       </main>
-      
       <nav class="bottom-nav">
   <button mat-button routerLink="/dashboard" routerLinkActive="active" class="nav-item">
     <mat-icon>dashboard</mat-icon>
@@ -27,9 +26,9 @@ import { MatIconModule } from '@angular/material/icon';
     <mat-icon>list</mat-icon>
     <span>Transactions</span>
   </button>
-  <button mat-button routerLink="/categories" routerLinkActive="active" class="nav-item">
-    <mat-icon>category</mat-icon>
-    <span>Categories</span>
+  <button mat-button routerLink="/analytics" routerLinkActive="active" class="nav-item">
+    <mat-icon>analytics</mat-icon>
+    <span>Analytics</span>
   </button>
 </nav>
 

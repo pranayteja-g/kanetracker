@@ -4,6 +4,7 @@ import { TransactionFormComponent } from './transaction-form/transaction-form.co
 import { DashboardComponent } from './dashboard/dashboard.component';
 import { LayoutComponent } from './layout/layout.component';
 import { CategorymanagementComponent } from './categorymanagement/categorymanagement.component';
+import { AnalyticsComponent } from './analytics/analytics.component';
 
 export const routes: Routes = [
     {
@@ -15,6 +16,7 @@ export const routes: Routes = [
             { path: 'transactions', component: TransactionsComponent },
             { path: 'transaction-form', component: TransactionFormComponent },
             { path: 'categories', component: CategorymanagementComponent },
+            { path: 'analytics', component: AnalyticsComponent }
         ]
     }
 ];

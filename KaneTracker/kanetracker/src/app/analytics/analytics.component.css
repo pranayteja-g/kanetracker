@@ -1,0 +1,387 @@
+.analytics-container {
+  padding: 16px;
+  max-width: 100%;
+  margin: 0 auto;
+  padding-bottom: 100px; /* Space for bottom nav */
+  overflow-x: hidden;
+}
+
+h1 {
+  text-align: center;
+  color: #1976d2;
+  margin-bottom: 24px;
+  font-size: 1.8rem;
+  font-weight: 600;
+}
+
+/* Mobile-First Summary Cards */
+.summary-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.summary-card {
+  background: white;
+  padding: 16px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  border-left: 4px solid #e0e0e0;
+}
+
+.summary-card.income {
+  border-left-color: #4CAF50;
+}
+
+.summary-card.expense {
+  border-left-color: #f44336;
+}
+
+.summary-card.balance.positive {
+  border-left-color: #4CAF50;
+}
+
+.summary-card.balance.negative {
+  border-left-color: #f44336;
+}
+
+.summary-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(25, 118, 210, 0.1);
+  flex-shrink: 0;
+}
+
+.summary-card.income .summary-icon {
+  background: rgba(76, 175, 80, 0.1);
+  color: #4CAF50;
+}
+
+.summary-card.expense .summary-icon {
+  background: rgba(244, 67, 54, 0.1);
+  color: #f44336;
+}
+
+.summary-card.balance.positive .summary-icon {
+  background: rgba(76, 175, 80, 0.1);
+  color: #4CAF50;
+}
+
+.summary-card.balance.negative .summary-icon {
+  background: rgba(244, 67, 54, 0.1);
+  color: #f44336;
+}
+
+.summary-icon mat-icon {
+  font-size: 24px;
+  width: 24px;
+  height: 24px;
+}
+
+.summary-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.summary-info h3 {
+  margin: 0 0 4px 0;
+  font-size: 0.9rem;
+  color: #666;
+  font-weight: 500;
+}
+
+.summary-info p {
+  margin: 0;
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #333;
+}
+
+/* Mobile-First Charts Section */
+.charts-section {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.chart-card {
+  padding: 0;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  overflow: hidden;
+}
+
+.chart-card mat-card-header {
+  padding: 16px 16px 8px 16px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+}
+
+.chart-card mat-card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #333;
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.chart-card mat-card-title mat-icon {
+  font-size: 20px;
+  width: 20px;
+  height: 20px;
+  color: #1976d2;
+}
+
+.chart-card mat-card-content {
+  padding: 16px;
+}
+
+.chart-container {
+  position: relative;
+  height: 280px;
+  width: 100%;
+}
+
+/* Mobile-optimized No Data States */
+.no-data {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  color: #999;
+  text-align: center;
+  padding: 20px;
+}
+
+.no-data mat-icon {
+  font-size: 40px;
+  width: 40px;
+  height: 40px;
+  margin-bottom: 12px;
+  opacity: 0.5;
+}
+
+.no-data p {
+  margin: 0 0 8px 0;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.no-data span {
+  font-size: 0.85rem;
+  opacity: 0.7;
+  line-height: 1.4;
+}
+
+/* Mobile-optimized Top Categories */
+.top-categories {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.category-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.category-rank {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #1976d2;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+
+.category-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  flex-shrink: 0;
+}
+
+.category-details {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.category-name {
+  font-weight: 600;
+  color: #333;
+  font-size: 0.9rem;
+}
+
+.category-amount {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #f44336;
+}
+
+.category-percentage {
+  font-size: 0.85rem;
+  color: #666;
+  background: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+/* Tablet and larger screens */
+@media (min-width: 768px) {
+  .analytics-container {
+    padding: 24px;
+    max-width: 1200px;
+  }
+  
+  h1 {
+    font-size: 2rem;
+    margin-bottom: 32px;
+  }
+  
+  .summary-cards {
+    flex-direction: row;
+    gap: 20px;
+  }
+  
+  .summary-card {
+    flex: 1;
+    padding: 20px;
+  }
+  
+  .summary-info p {
+    font-size: 1.6rem;
+  }
+  
+  .charts-section {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 24px;
+  }
+  
+  .chart-card.full-width {
+    grid-column: 1 / -1;
+  }
+  
+  .chart-container {
+    height: 320px;
+  }
+  
+  .category-rank {
+    width: 32px;
+    height: 32px;
+    font-size: 0.9rem;
+  }
+  
+  .category-details {
+    gap: 4px;
+  }
+  
+  .category-name {
+    font-size: 1rem;
+  }
+  
+  .category-amount {
+    font-size: 1.1rem;
+  }
+}
+
+/* Small mobile phones */
+@media (max-width: 400px) {
+  .analytics-container {
+    padding: 12px;
+  }
+  
+  h1 {
+    font-size: 1.6rem;
+    margin-bottom: 20px;
+  }
+  
+  .summary-card {
+    padding: 12px;
+    gap: 12px;
+  }
+  
+  .summary-icon {
+    width: 40px;
+    height: 40px;
+  }
+  
+  .summary-icon mat-icon {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+  }
+  
+  .summary-info p {
+    font-size: 1.2rem;
+  }
+  
+  .chart-container {
+    height: 240px;
+  }
+  
+  .category-row {
+    padding: 10px;
+    gap: 10px;
+  }
+  
+  .category-rank {
+    width: 24px;
+    height: 24px;
+    font-size: 0.8rem;
+  }
+  
+  .category-dot {
+    width: 12px;
+    height: 12px;
+  }
+}
+
+/* Touch-friendly improvements */
+.chart-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.chart-card:active {
+  transform: scale(0.98);
+}
+
+/* Ensure text doesn't get too small */
+@media (max-width: 320px) {
+  .summary-info h3 {
+    font-size: 0.85rem;
+  }
+  
+  .summary-info p {
+    font-size: 1.1rem;
+  }
+  
+  .chart-card mat-card-title {
+    font-size: 1rem;
+  }
+}
