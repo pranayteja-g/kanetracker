@@ -1,0 +1,58 @@
+{
+    "NAVIGATION": {
+        "HOME": "హోమ్",
+        "TRANSACTIONS": "లావాదేవీలు",
+        "ANALYTICS": "విశ్లేషణలు",
+        "SEARCH": "వెతుకు",
+        "CATEGORIES": "వర్గాలు"
+    },
+    "TRANSACTION": {
+        "ADD_TRANSACTION": "లావాదేవీ జోడించు",
+        "AMOUNT": "మొత్తం",
+        "CATEGORY": "వర్గం",
+        "DESCRIPTION": "వివరణ",
+        "TYPE": "రకం",
+        "INCOME": "ఆదాయం",
+        "EXPENSE": "ఖర్చు",
+        "DATE": "తేదీ",
+        "SAVE": "భద్రపరచు",
+        "CANCEL": "రద్దు చేయి"
+    },
+    "SEARCH": {
+        "SEARCH_TRANSACTIONS": "లావాదేవీలను వెతుకు",
+        "SEARCH_DESCRIPTIONS": "వివరణలను వెతుకు...",
+        "QUICK_FILTERS": "త్వరిత ఫిల్టర్లు:",
+        "TODAY": "ఈరోజు",
+        "LAST_7_DAYS": "గత 7 రోజులు",
+        "LAST_30_DAYS": "గత 30 రోజులు",
+        "LAST_3_MONTHS": "గత 3 నెలలు",
+        "THIS_YEAR": "ఈ సంవత్సరం",
+        "RESULTS_FOUND": "{{count}} ఫలితం{{count === 1 ? '' : 'లు'}} దొరికాయి",
+        "NO_RESULTS": "లావాదేవీలు దొరకలేదు",
+        "MORE_FILTERS": "మరిన్ని ఫిల్టర్లు",
+        "HIDE_FILTERS": "ఫిల్టర్లను దాచు",
+        "CLEAR_FILTERS": "అన్ని ఫిల్టర్లను క్లియర్ చేయి"
+    },
+    "ANALYTICS": {
+        "TITLE": "ఆర్థిక విశ్లేషణలు",
+        "TOTAL_INCOME": "మొత్తం ఆదాయం",
+        "TOTAL_EXPENSE": "మొత్తం ఖర్చు",
+        "NET_SAVINGS": "నికర పొదుపులు",
+        "MONTHLY_TRENDS": "నెలవారీ ట్రెండ్స్",
+        "CATEGORY_BREAKDOWN": "వర్గం వారీ విభజన"
+    },
+    "CATEGORIES": {
+        "MANAGE_CATEGORIES": "వర్గాలను నిర్వహించు",
+        "ADD_CATEGORY": "వర్గం జోడించు",
+        "CATEGORY_NAME": "వర్గం పేరు",
+        "CATEGORY_COLOR": "వర్గం రంగు"
+    },
+    "COMMON": {
+        "LOADING": "లోడ్ చేస్తోంది...",
+        "NO_DATA": "డేటా అందుబాటులో లేదు",
+        "ERROR": "లోపం సంభవించింది",
+        "SUCCESS": "విజయవంతం",
+        "DELETE": "తొలగించు",
+        "EDIT": "సవరించు"
+    }
+}

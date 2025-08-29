@@ -15,7 +15,7 @@ export class AppComponent {
   // In app.component.ts
   @HostListener('document:keydown', ['$event'])
   handleKeydown(event: KeyboardEvent) {
-    if (event.ctrlKey && event.key === 'g') {
+    if (event.ctrlKey && event.key === 'k') {
       event.preventDefault();
       this.router.navigate(['/search']);
     }

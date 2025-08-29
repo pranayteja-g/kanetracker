@@ -1,0 +1,58 @@
+{
+    "NAVIGATION": {
+        "HOME": "Home",
+        "TRANSACTIONS": "Transactions",
+        "ANALYTICS": "Analytics",
+        "SEARCH": "Search",
+        "CATEGORIES": "Categories"
+    },
+    "TRANSACTION": {
+        "ADD_TRANSACTION": "Add Transaction",
+        "AMOUNT": "Amount",
+        "CATEGORY": "Category",
+        "DESCRIPTION": "Description",
+        "TYPE": "Type",
+        "INCOME": "Income",
+        "EXPENSE": "Expense",
+        "DATE": "Date",
+        "SAVE": "Save",
+        "CANCEL": "Cancel"
+    },
+    "SEARCH": {
+        "SEARCH_TRANSACTIONS": "Search Transactions",
+        "SEARCH_DESCRIPTIONS": "Search descriptions...",
+        "QUICK_FILTERS": "Quick Filters:",
+        "TODAY": "Today",
+        "LAST_7_DAYS": "Last 7 Days",
+        "LAST_30_DAYS": "Last 30 Days",
+        "LAST_3_MONTHS": "Last 3 Months",
+        "THIS_YEAR": "This Year",
+        "RESULTS_FOUND": "{{count}} result{{count === 1 ? '' : 's'}} found",
+        "NO_RESULTS": "No transactions found",
+        "MORE_FILTERS": "More Filters",
+        "HIDE_FILTERS": "Hide Filters",
+        "CLEAR_FILTERS": "Clear All Filters"
+    },
+    "ANALYTICS": {
+        "TITLE": "Financial Analytics",
+        "TOTAL_INCOME": "Total Income",
+        "TOTAL_EXPENSE": "Total Expense",
+        "NET_SAVINGS": "Net Savings",
+        "MONTHLY_TRENDS": "Monthly Trends",
+        "CATEGORY_BREAKDOWN": "Category Breakdown"
+    },
+    "CATEGORIES": {
+        "MANAGE_CATEGORIES": "Manage Categories",
+        "ADD_CATEGORY": "Add Category",
+        "CATEGORY_NAME": "Category Name",
+        "CATEGORY_COLOR": "Category Color"
+    },
+    "COMMON": {
+        "LOADING": "Loading...",
+        "NO_DATA": "No data available",
+        "ERROR": "An error occurred",
+        "SUCCESS": "Success",
+        "DELETE": "Delete",
+        "EDIT": "Edit"
+    }
+}
