@@ -28,10 +28,10 @@
       <mat-button-toggle value="expense">Expense</mat-button-toggle>
     </mat-button-toggle-group>
 
-    <!-- Category with loading state -->
+    <!-- Category - REMOVED [disabled] attribute -->
     <mat-form-field appearance="outline" class="full-width">
       <mat-label>Category</mat-label>
-      <mat-select formControlName="category" [disabled]="isLoading">
+      <mat-select formControlName="category">
         <mat-option *ngFor="let cat of categories" [value]="cat.name">
           <span class="color-dot" [style.background]="cat.color"></span> {{ cat.name }}
         </mat-option>
@@ -77,7 +77,7 @@
       </mat-error>
     </mat-form-field>
 
-    <!-- Submit button with loading state -->
+    <!-- Submit button - REMOVED [disabled] attribute, using canSubmit getter instead -->
     <button mat-raised-button color="primary" class="full-width submit-btn" type="submit" [disabled]="!canSubmit">
       <mat-icon *ngIf="isSubmitting" class="spinning">refresh</mat-icon>
       <span *ngIf="!isSubmitting">Save Transaction</span>

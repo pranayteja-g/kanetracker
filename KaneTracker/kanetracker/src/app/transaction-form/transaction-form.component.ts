@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, AfterViewInit, ChangeDetectorRef } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, AbstractControl } from '@angular/forms';
 import { Router } from '@angular/router';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -19,7 +19,7 @@ import { Category } from '../models/category.interface';
 import { DexieService } from '../services/dexie.service';
 import { Transaction } from '../models/transaction.interface';
 
-// Custom Validators
+// Custom Validators (keep your existing ones)
 export class CustomValidators {
   static futureDate(control: AbstractControl): { [key: string]: any } | null {
     if (!control.value) return null;
@@ -27,7 +27,7 @@ export class CustomValidators {
     const today = new Date();
     const inputDate = new Date(control.value);
     const maxFutureDate = new Date();
-    maxFutureDate.setDate(today.getDate() + 7); // Allow up to 7 days in future
+    maxFutureDate.setDate(today.getDate() + 7);
 
     if (inputDate > maxFutureDate) {
       return { 'futureDate': { value: control.value } };
@@ -39,7 +39,7 @@ export class CustomValidators {
     if (!control.value) return null;
 
     const amount = Number(control.value);
-    const maxAmount = 10000000; // 1 crore
+    const maxAmount = 10000000;
 
     if (amount > maxAmount) {
       return { 'unreasonableAmount': { value: control.value, max: maxAmount } };
@@ -76,7 +76,7 @@ export class CustomValidators {
   templateUrl: './transaction-form.component.html',
   styleUrls: ['./transaction-form.component.css']
 })
-export class TransactionFormComponent implements OnInit {
+export class TransactionFormComponent implements OnInit, AfterViewInit {
   transactionForm!: FormGroup;
   categories: Category[] = [];
   selectedType: 'income' | 'expense' = 'expense';
@@ -88,7 +88,8 @@ export class TransactionFormComponent implements OnInit {
     private dexieService: DexieService,
     private snackBar: MatSnackBar,
     private router: Router,
-    private dialog: MatDialog
+    private dialog: MatDialog,
+    private cdr: ChangeDetectorRef // Add ChangeDetectorRef
   ) { }
 
   async ngOnInit() {
@@ -97,10 +98,15 @@ export class TransactionFormComponent implements OnInit {
     this.setupFormValueChanges();
   }
 
+  ngAfterViewInit() {
+    // Trigger change detection to avoid ExpressionChangedAfterChecked errors
+    this.cdr.detectChanges();
+  }
+
   initializeForm() {
     this.transactionForm = this.fb.group({
       amount: [
-        null,
+        { value: null, disabled: false }, // Set disabled state in FormControl constructor
         [
           Validators.required,
           Validators.min(0.01),
@@ -108,22 +114,22 @@ export class TransactionFormComponent implements OnInit {
           CustomValidators.reasonableAmount
         ]
       ],
-      category: ['', Validators.required],
+      category: [{ value: '', disabled: false }, Validators.required], // Fixed: set disabled in constructor
       date: [
-        new Date(),
+        { value: new Date(), disabled: false }, // Fixed: set disabled in constructor
         [
           Validators.required,
           CustomValidators.futureDate
         ]
       ],
       description: [
-        '',
+        { value: '', disabled: false }, // Fixed: set disabled in constructor
         [
           Validators.maxLength(200),
           CustomValidators.noWhitespace
         ]
       ],
-      type: ['expense', Validators.required]
+      type: [{ value: 'expense', disabled: false }, Validators.required] // Fixed: set disabled in constructor
     });
   }
 
@@ -138,7 +144,6 @@ export class TransactionFormComponent implements OnInit {
     // Real-time amount validation feedback
     this.transactionForm.get('amount')?.valueChanges.subscribe((amount) => {
       if (amount && amount > 100000) {
-        // Show warning for large amounts (but don't block)
         this.showWarning('Large amount detected. Please verify the amount is correct.');
       }
     });
@@ -147,19 +152,28 @@ export class TransactionFormComponent implements OnInit {
   async loadCategories() {
     try {
       this.isLoading = true;
+
+      // Control loading state programmatically instead of using [disabled] in template
+      this.transactionForm.get('category')?.disable();
+
       const allCategories = await this.dexieService.getAllCategories();
       const selectedType = this.transactionForm.get('type')?.value || 'expense';
       this.categories = allCategories.filter(cat => cat.type === selectedType);
+
+      // Re-enable after loading
+      this.transactionForm.get('category')?.enable();
 
       if (this.categories.length === 0) {
         this.showInfo(`No ${selectedType} categories found. Create one to get started!`);
       }
     } catch (error) {
       this.showError('Failed to load categories. Please try again.');
+      this.transactionForm.get('category')?.enable(); // Re-enable on error
     } finally {
       this.isLoading = false;
     }
   }
+
 
   async onSubmit() {
     if (this.transactionForm.invalid) {

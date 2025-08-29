@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import Dexie from 'dexie';
+import Dexie, { Table } from 'dexie';
 import { Transaction } from '../models/transaction.interface';
 import { Category } from '../models/category.interface';
 
@@ -7,23 +7,23 @@ import { Category } from '../models/category.interface';
   providedIn: 'root'
 })
 export class DexieService extends Dexie {
-  transactions: Dexie.Table<Transaction, number>;
-  categories!: Dexie.Table<Category, number>;
+  transactions!: Table<Transaction, number>;
+  categories!: Table<Category, number>;
 
   constructor() {
     super('KaneTrackerDB');
-    this.version(2).stores({ // Increment version for schema change
+    this.version(2).stores({
       transactions: '++id, amount, category, date, description, type',
-      categories: '++id, name, color, type' // Add type to schema
+      categories: '++id, name, color, type'
     }).upgrade(tx => {
-      // Migration: add type field to existing categories
-      return tx.table('categories').toCollection().modify(category => {
+      return tx.table('categories').toCollection().modify((category: Category) => {
         if (!category.type) {
-          category.type = 'expense'; // Default existing categories to expense
+          category.type = 'expense';
         }
       });
     });
 
+    // Initialize tables
     this.transactions = this.table('transactions');
     this.categories = this.table('categories');
   }
@@ -42,7 +42,6 @@ export class DexieService extends Dexie {
       throw new Error('Failed to save transaction. Please try again.');
     }
   }
-
 
   getAllTransactions(): Promise<Transaction[]> {
     return this.transactions.toArray();
@@ -66,7 +65,6 @@ export class DexieService extends Dexie {
         throw new Error('Category name is required');
       }
 
-      // Check for duplicate category names within the same type
       const existingCategories = await this.getCategoriesByType(category.type);
       const isDuplicate = existingCategories.some(
         cat => cat.name.toLowerCase().trim() === category.name.toLowerCase().trim()
@@ -79,7 +77,7 @@ export class DexieService extends Dexie {
       return await this.categories.add(category);
     } catch (error) {
       console.error('Error adding category:', error);
-      throw error; // Re-throw to preserve specific error messages
+      throw error;
     }
   }
 
@@ -88,7 +86,6 @@ export class DexieService extends Dexie {
   }
 
   async deleteCategory(categoryId: number): Promise<boolean> {
-    // Check if category is being used in any transactions
     const categoryToDelete = await this.categories.get(categoryId);
     if (!categoryToDelete) return false;
 
@@ -101,7 +98,6 @@ export class DexieService extends Dexie {
       throw new Error(`Cannot delete category "${categoryToDelete.name}" because it's used in ${transactionsUsingCategory} transaction(s).`);
     }
 
-    // Safe to delete
     await this.categories.delete(categoryId);
     return true;
   }
@@ -117,4 +113,101 @@ export class DexieService extends Dexie {
     return this.categories.update(categoryId, categoryData);
   }
 
+  // Fixed search method with proper TypeScript typing
+  async searchTransactions(
+    query: string = '',
+    category: string = '',
+    type: 'income' | 'expense' | '' = '',
+    startDate: Date | null = null,
+    endDate: Date | null = null,
+    minAmount: number | null = null,
+    maxAmount: number | null = null,
+    sortBy: 'date' | 'amount' | 'category' = 'date',
+    sortAsc: boolean = false
+  ): Promise<Transaction[]> {
+    try {
+      let collection = this.transactions.toCollection(); // Fixed: use this.transactions instead of this.db.transactions
+
+      // Text search in description - Fixed typing
+      if (query) {
+        const lowerQuery = query.toLowerCase();
+        collection = collection.filter((t: Transaction) =>
+          t.description.toLowerCase().includes(lowerQuery)
+        );
+      }
+
+      // Category filter - Fixed typing
+      if (category) {
+        collection = collection.filter((t: Transaction) => t.category === category);
+      }
+
+      // Transaction type filter - Fixed typing
+      if (type) {
+        collection = collection.filter((t: Transaction) => t.type === type);
+      }
+
+      // Date range filters - Fixed typing
+      if (startDate) {
+        collection = collection.filter((t: Transaction) => new Date(t.date) >= startDate);
+      }
+
+      if (endDate) {
+        collection = collection.filter((t: Transaction) => new Date(t.date) <= endDate);
+      }
+
+      // Amount range filters - Fixed typing
+      if (minAmount !== null) {
+        collection = collection.filter((t: Transaction) => t.amount >= minAmount);
+      }
+
+      if (maxAmount !== null) {
+        collection = collection.filter((t: Transaction) => t.amount <= maxAmount);
+      }
+
+      // Execute query and get results
+      let results = await collection.toArray();
+
+      // Sort results - Fixed typing
+      results = results.sort((a: Transaction, b: Transaction) => {
+        let cmp = 0;
+        switch (sortBy) {
+          case 'date':
+            cmp = new Date(b.date).getTime() - new Date(a.date).getTime();
+            break;
+          case 'amount':
+            cmp = b.amount - a.amount;
+            break;
+          case 'category':
+            cmp = a.category.localeCompare(b.category);
+            break;
+        }
+        return sortAsc ? -cmp : cmp;
+      });
+
+      return results;
+    } catch (error) {
+      console.error('Error searching transactions:', error);
+      return [];
+    }
+  }
+
+  // Quick filter methods for common use cases
+  async getTransactionsByDateRange(startDate: Date, endDate: Date): Promise<Transaction[]> {
+    return this.searchTransactions('', '', '', startDate, endDate);
+  }
+
+  async getTransactionsByCategory(category: string): Promise<Transaction[]> {
+    return this.searchTransactions('', category);
+  }
+
+  async getTransactionsByType(type: 'income' | 'expense'): Promise<Transaction[]> {
+    return this.searchTransactions('', '', type);
+  }
+
+  async getRecentTransactions(days: number = 7): Promise<Transaction[]> {
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(endDate.getDate() - days);
+    return this.getTransactionsByDateRange(startDate, endDate);
+  }
 }

@@ -8,6 +8,7 @@ import { DexieService } from '../services/dexie.service';
 import { Transaction } from '../models/transaction.interface';
 import { Category } from '../models/category.interface';
 import { MatDialog } from '@angular/material/dialog';
+import { Router } from '@angular/router';
 import { TransactionDetailDialogComponent } from '../transaction-detail-dialog/transaction-detail-dialog.component';
 
 @Component({
@@ -24,7 +25,8 @@ export class TransactionsComponent implements OnInit {
   constructor(
     private dexieService: DexieService,
     private snackBar: MatSnackBar,
-    private dialog: MatDialog
+    private dialog: MatDialog,
+    private router: Router
   ) { }
 
   async ngOnInit() {
@@ -34,6 +36,10 @@ export class TransactionsComponent implements OnInit {
   async loadData() {
     this.transactions = await this.dexieService.getAllTransactions();
     this.categories = await this.dexieService.getAllCategories();
+  }
+
+  navigateToSearch() {
+    this.router.navigate(['/search']);
   }
 
   getCategoryColor(categoryName: string): string {

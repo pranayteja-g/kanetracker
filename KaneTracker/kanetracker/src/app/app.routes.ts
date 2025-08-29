@@ -5,6 +5,7 @@ import { DashboardComponent } from './dashboard/dashboard.component';
 import { LayoutComponent } from './layout/layout.component';
 import { CategorymanagementComponent } from './categorymanagement/categorymanagement.component';
 import { AnalyticsComponent } from './analytics/analytics.component';
+import { SearchComponent } from './search/search.component';
 
 export const routes: Routes = [
     {
@@ -16,7 +17,8 @@ export const routes: Routes = [
             { path: 'transactions', component: TransactionsComponent },
             { path: 'transaction-form', component: TransactionFormComponent },
             { path: 'categories', component: CategorymanagementComponent },
-            { path: 'analytics', component: AnalyticsComponent }
+            { path: 'analytics', component: AnalyticsComponent },
+            { path: 'search', component: SearchComponent }
         ]
     }
 ];

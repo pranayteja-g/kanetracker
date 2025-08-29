@@ -1,5 +1,5 @@
-import { Component } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
+import { Component, HostListener } from '@angular/core';
+import { RouterOutlet, Router } from '@angular/router';
 
 @Component({
   selector: 'app-root',
@@ -9,4 +9,16 @@ import { RouterOutlet } from '@angular/router';
 })
 export class AppComponent {
   title = 'kanetracker';
+
+  constructor(private router: Router) {}
+
+  // In app.component.ts
+  @HostListener('document:keydown', ['$event'])
+  handleKeydown(event: KeyboardEvent) {
+    if (event.ctrlKey && event.key === 'g') {
+      event.preventDefault();
+      this.router.navigate(['/search']);
+    }
+  }
+
 }

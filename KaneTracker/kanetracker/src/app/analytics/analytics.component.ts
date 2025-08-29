@@ -1,10 +1,15 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { provideNativeDateAdapter } from '@angular/material/core';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatSelectModule } from '@angular/material/select';
 import { MatFormFieldModule } from '@angular/material/form-field';
+import { ReactiveFormsModule, FormGroup, FormControl } from '@angular/forms';
+import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatNativeDateModule } from '@angular/material/core';
+import { MatInputModule } from '@angular/material/input';
 import { BaseChartDirective } from 'ng2-charts';
 import { ChartConfiguration, ChartData, ChartType } from 'chart.js';
 import { DexieService } from '../services/dexie.service';
@@ -12,55 +17,93 @@ import { Transaction } from '../models/transaction.interface';
 import { Category } from '../models/category.interface';
 import {
   Chart,
-  ArcElement,
-  BarElement,
-  BarController,
-  CategoryScale,
-  LinearScale,
-  DoughnutController,
-  LineController,
-  LineElement,
-  PointElement,
-  PieController,
-  Filler,
-  Legend,
-  Title,
-  Tooltip
+  ArcElement,        // For doughnut charts
+  BarElement,        // For bar charts  
+  LineElement,       // For line charts
+  PointElement,      // For line chart points
+  CategoryScale,     // For category axis
+  LinearScale,       // For linear axis
+  DoughnutController,// For doughnut charts
+  LineController,    // For line charts
+  BarController,     // For bar charts
+  Legend,           // For chart legends
+  Tooltip           // For chart tooltips
 } from 'chart.js';
 
-// Register Chart.js components - ADD THIS!
 Chart.register(
-  ArcElement,
-  BarElement,
-  BarController,
-  CategoryScale,
-  LinearScale,
-  DoughnutController,
-  LineController,
-  LineElement,
-  PointElement,
-  PieController,
-  Filler,
-  Legend,
-  Title,
-  Tooltip
+  ArcElement, BarElement, LineElement, PointElement,
+  CategoryScale, LinearScale, DoughnutController,
+  LineController, BarController, Legend, Tooltip
 );
 
 @Component({
   selector: 'app-analytics',
   standalone: true,
+  providers: [provideNativeDateAdapter()],
   imports: [
-    CommonModule,
-    MatCardModule,
-    MatIconModule,
-    MatButtonModule,
-    MatSelectModule,
-    MatFormFieldModule,
-    BaseChartDirective
+    CommonModule, MatCardModule, MatIconModule, MatButtonModule,
+    MatSelectModule, MatFormFieldModule, ReactiveFormsModule,
+    MatDatepickerModule, MatInputModule, BaseChartDirective
   ],
   template: `
     <div class="analytics-container">
       <h1>Financial Analytics</h1>
+
+      <!-- Date Range Toggle -->
+      <div class="date-range-toggle">
+        <button mat-raised-button color="primary" (click)="showDateRange = !showDateRange" class="toggle-btn">
+          <mat-icon>{{ showDateRange ? 'visibility_off' : 'date_range' }}</mat-icon>
+          {{ showDateRange ? 'Hide Date Range' : 'Select Date Range' }}
+        </button>
+      </div>
+
+      <!-- Date Range Picker -->
+      <mat-card class="date-range-card" *ngIf="showDateRange">
+        <mat-card-header>
+          <mat-card-title>
+            <mat-icon>date_range</mat-icon>
+            Select Date Range
+          </mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="date-range-controls">
+            <div class="preset-buttons">
+              <button mat-button (click)="setDateRange('last7Days')" class="preset-btn">Last 7 Days</button>
+              <button mat-button (click)="setDateRange('last30Days')" class="preset-btn">Last 30 Days</button>
+              <button mat-button (click)="setDateRange('last3Months')" class="preset-btn">Last 3 Months</button>
+              <button mat-button (click)="setDateRange('lastYear')" class="preset-btn">Last Year</button>
+              <button mat-button (click)="setDateRange('allTime')" class="preset-btn">All Time</button>
+            </div>
+            <mat-form-field appearance="outline" class="date-range-field">
+              <mat-label>Custom Date Range</mat-label>
+              <mat-date-range-input [formGroup]="rangeForm" [rangePicker]="picker">
+                <input matStartDate formControlName="start" placeholder="Start date">
+                <input matEndDate formControlName="end" placeholder="End date">
+              </mat-date-range-input>
+              <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
+              <mat-date-range-picker #picker></mat-date-range-picker>
+            </mat-form-field>
+          </div>
+          <div class="selected-range" *ngIf="currentDateRange.start && currentDateRange.end">
+            <mat-icon>info</mat-icon>
+            <span>
+              Showing data from {{ currentDateRange.start | date:'mediumDate' }} 
+              to {{ currentDateRange.end | date:'mediumDate' }}
+              ({{ getDateRangeDays() }} days)
+            </span>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Current Range Display -->
+      <div class="current-range-display" *ngIf="!showDateRange && currentDateRange.start && currentDateRange.end">
+        <mat-icon>schedule</mat-icon>
+        <span>
+          {{ currentDateRange.start | date:'mediumDate' }} - 
+          {{ currentDateRange.end | date:'mediumDate' }}
+          ({{ getDateRangeDays() }} days)
+        </span>
+      </div>
 
       <!-- Summary Cards -->
       <div class="summary-cards">
@@ -73,7 +116,6 @@ Chart.register(
             <p>₹{{ totalIncome | number:'1.2-2' }}</p>
           </div>
         </div>
-
         <div class="summary-card expense">
           <div class="summary-icon">
             <mat-icon>trending_down</mat-icon>
@@ -83,7 +125,6 @@ Chart.register(
             <p>₹{{ totalExpenses | number:'1.2-2' }}</p>
           </div>
         </div>
-
         <div class="summary-card balance" [class.positive]="netBalance >= 0" [class.negative]="netBalance < 0">
           <div class="summary-icon">
             <mat-icon>account_balance</mat-icon>
@@ -95,49 +136,57 @@ Chart.register(
         </div>
       </div>
 
-      <!-- Charts Section -->
+      <!-- Interactive Chart Cards -->
       <div class="charts-section">
-        
-        <!-- Category Breakdown (Pie Chart) -->
-        <mat-card class="chart-card">
+        <!-- Category Breakdown Card -->
+        <mat-card class="chart-card" (click)="toggleChart('categoryChart')">
           <mat-card-header>
             <mat-card-title>
-              <mat-icon>pie_chart</mat-icon>
-              Spending by Category
+              <div class="title-content">
+                <mat-icon>pie_chart</mat-icon>
+                Spending by Category
+              </div>
+              <mat-icon class="expand-icon" [class.rotated]="chartVisibility.categoryChart">
+                {{ chartVisibility.categoryChart ? 'expand_less' : 'expand_more' }}
+              </mat-icon>
             </mat-card-title>
           </mat-card-header>
-          <mat-card-content>
+          <mat-card-content *ngIf="chartVisibility.categoryChart">
             <div class="chart-container" *ngIf="pieChartData.datasets[0].data.length > 0; else noExpenseData">
-              <canvas baseChart
-                [data]="pieChartData"
-                [type]="pieChartType"
-                [options]="pieChartOptions">
-              </canvas>
+              <canvas baseChart [data]="pieChartData" [type]="pieChartType" [options]="pieChartOptions"></canvas>
             </div>
             <ng-template #noExpenseData>
               <div class="no-data">
                 <mat-icon>pie_chart_outlined</mat-icon>
-                <p>No expense data available</p>
+                <p>No expense data available for selected period</p>
               </div>
             </ng-template>
           </mat-card-content>
+          <mat-card-content *ngIf="!chartVisibility.categoryChart" class="chart-preview">
+            <div class="preview-content">
+              <mat-icon>visibility</mat-icon>
+              <p>Click to view category breakdown chart</p>
+              <span>₹{{ totalExpenses | number:'1.0-0' }} total expenses to analyze</span>
+            </div>
+          </mat-card-content>
         </mat-card>
 
-        <!-- Monthly Trends (Line Chart) -->
-        <mat-card class="chart-card">
+        <!-- Monthly Trends Card -->
+        <mat-card class="chart-card" (click)="toggleChart('monthlyTrends')">
           <mat-card-header>
             <mat-card-title>
-              <mat-icon>show_chart</mat-icon>
-              Monthly Trends
+              <div class="title-content">
+                <mat-icon>show_chart</mat-icon>
+                Monthly Trends
+              </div>
+              <mat-icon class="expand-icon" [class.rotated]="chartVisibility.monthlyTrends">
+                {{ chartVisibility.monthlyTrends ? 'expand_less' : 'expand_more' }}
+              </mat-icon>
             </mat-card-title>
           </mat-card-header>
-          <mat-card-content>
+          <mat-card-content *ngIf="chartVisibility.monthlyTrends">
             <div class="chart-container" *ngIf="lineChartData.datasets.length > 0; else noTrendData">
-              <canvas baseChart
-                [data]="lineChartData"
-                [type]="lineChartType"
-                [options]="lineChartOptions">
-              </canvas>
+              <canvas baseChart [data]="lineChartData" [type]="lineChartType" [options]="lineChartOptions"></canvas>
             </div>
             <ng-template #noTrendData>
               <div class="no-data">
@@ -147,23 +196,31 @@ Chart.register(
               </div>
             </ng-template>
           </mat-card-content>
+          <mat-card-content *ngIf="!chartVisibility.monthlyTrends" class="chart-preview">
+            <div class="preview-content">
+              <mat-icon>visibility</mat-icon>
+              <p>Click to view monthly trends chart</p>
+              <span>Track income and expenses over {{ getDateRangeDays() }} days</span>
+            </div>
+          </mat-card-content>
         </mat-card>
 
-        <!-- Income vs Expenses (Bar Chart) -->
-        <mat-card class="chart-card full-width">
+        <!-- Income vs Expenses Card -->
+        <mat-card class="chart-card full-width" (click)="toggleChart('incomeVsExpenses')">
           <mat-card-header>
             <mat-card-title>
-              <mat-icon>bar_chart</mat-icon>
-              Income vs Expenses Comparison
+              <div class="title-content">
+                <mat-icon>bar_chart</mat-icon>
+                Income vs Expenses Comparison
+              </div>
+              <mat-icon class="expand-icon" [class.rotated]="chartVisibility.incomeVsExpenses">
+                {{ chartVisibility.incomeVsExpenses ? 'expand_less' : 'expand_more' }}
+              </mat-icon>
             </mat-card-title>
           </mat-card-header>
-          <mat-card-content>
+          <mat-card-content *ngIf="chartVisibility.incomeVsExpenses">
             <div class="chart-container" *ngIf="barChartData.datasets.length > 0; else noComparisonData">
-              <canvas baseChart
-                [data]="barChartData"
-                [type]="barChartType"
-                [options]="barChartOptions">
-              </canvas>
+              <canvas baseChart [data]="barChartData" [type]="barChartType" [options]="barChartOptions"></canvas>
             </div>
             <ng-template #noComparisonData>
               <div class="no-data">
@@ -173,17 +230,29 @@ Chart.register(
               </div>
             </ng-template>
           </mat-card-content>
+          <mat-card-content *ngIf="!chartVisibility.incomeVsExpenses" class="chart-preview">
+            <div class="preview-content">
+              <mat-icon>visibility</mat-icon>
+              <p>Click to view income vs expenses comparison</p>
+              <span>Compare financial performance across months</span>
+            </div>
+          </mat-card-content>
         </mat-card>
 
-        <!-- Top Categories List -->
-        <mat-card class="chart-card">
+        <!-- Top Categories Card -->
+        <mat-card class="chart-card" (click)="toggleChart('topCategories')">
           <mat-card-header>
             <mat-card-title>
-              <mat-icon>list_alt</mat-icon>
-              Top Spending Categories
+              <div class="title-content">
+                <mat-icon>list_alt</mat-icon>
+                Top Spending Categories
+              </div>
+              <mat-icon class="expand-icon" [class.rotated]="chartVisibility.topCategories">
+                {{ chartVisibility.topCategories ? 'expand_less' : 'expand_more' }}
+              </mat-icon>
             </mat-card-title>
           </mat-card-header>
-          <mat-card-content>
+          <mat-card-content *ngIf="chartVisibility.topCategories">
             <div class="top-categories" *ngIf="topCategories.length > 0; else noTopCategories">
               <div *ngFor="let category of topCategories; let i = index" class="category-row">
                 <div class="category-rank">{{ i + 1 }}</div>
@@ -205,48 +274,58 @@ Chart.register(
               </div>
             </ng-template>
           </mat-card-content>
+          <mat-card-content *ngIf="!chartVisibility.topCategories" class="chart-preview">
+            <div class="preview-content">
+              <mat-icon>visibility</mat-icon>
+              <p>Click to view top spending categories</p>
+              <span>Analyze your biggest expense categories</span>
+            </div>
+          </mat-card-content>
         </mat-card>
-
       </div>
     </div>
   `,
   styleUrls: ['./analytics.component.css']
 })
 export class AnalyticsComponent implements OnInit {
-  @ViewChild(BaseChartDirective) chart: BaseChartDirective | undefined;
-
-  // Data properties
   totalIncome = 0;
   totalExpenses = 0;
   netBalance = 0;
   topCategories: { name: string; amount: number; color: string }[] = [];
+  showDateRange = false;
 
-  // Pie Chart Configuration - Fixed typing
+  rangeForm = new FormGroup({
+    start: new FormControl<Date | null>(null),
+    end: new FormControl<Date | null>(null)
+  });
+
+  currentDateRange = {
+    start: null as Date | null,
+    end: null as Date | null
+  };
+
+  chartVisibility = {
+    categoryChart: false,
+    monthlyTrends: false,
+    incomeVsExpenses: false,
+    topCategories: false
+  };
+
+  // Chart configurations
   pieChartType: ChartType = 'doughnut';
   pieChartData: ChartData<'doughnut'> = {
     labels: [],
-    datasets: [{
-      data: [],
-      backgroundColor: [],
-      borderWidth: 2,
-      borderColor: '#fff'
-    }]
+    datasets: [{ data: [], backgroundColor: [], borderWidth: 2, borderColor: '#fff' }]
   };
 
   pieChartOptions: ChartConfiguration['options'] = {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
-      legend: {
-        position: 'bottom',
-        labels: {
-          padding: 20,
-          usePointStyle: true
-        }
-      },
+      legend: { position: 'bottom', labels: { padding: 20, usePointStyle: true } },
       tooltip: {
         callbacks: {
-          label: function (context) {
+          label: (context) => {
             const value = context.parsed;
             const total = (context.dataset.data as number[]).reduce((a, b) => a + b, 0);
             const percentage = ((value / total) * 100).toFixed(1);
@@ -257,12 +336,8 @@ export class AnalyticsComponent implements OnInit {
     }
   };
 
-  // Line Chart Configuration
   lineChartType: ChartType = 'line';
-  lineChartData: ChartData<'line'> = {
-    labels: [],
-    datasets: []
-  };
+  lineChartData: ChartData<'line'> = { labels: [], datasets: [] };
 
   lineChartOptions: ChartConfiguration['options'] = {
     responsive: true,
@@ -270,232 +345,206 @@ export class AnalyticsComponent implements OnInit {
     scales: {
       y: {
         beginAtZero: true,
-        ticks: {
-          callback: function (value) {
-            return '₹' + Number(value).toLocaleString();
-          }
-        }
+        ticks: { callback: (value) => '₹' + Number(value).toLocaleString() }
       }
     },
     plugins: {
-      legend: {
-        position: 'top'
-      },
+      legend: { position: 'top' },
       tooltip: {
         callbacks: {
-          label: function (context) {
-            return `${context.dataset.label}: ₹${context.parsed.y.toLocaleString()}`;
-          }
+          label: (context) => `${context.dataset.label}: ₹${context.parsed.y.toLocaleString()}`
         }
       }
     }
   };
 
-  // Bar Chart Configuration
   barChartType: ChartType = 'bar';
-  barChartData: ChartData<'bar'> = {
-    labels: [],
-    datasets: []
-  };
-
-  barChartOptions: ChartConfiguration['options'] = {
-    responsive: true,
-    maintainAspectRatio: false,
-    scales: {
-      y: {
-        beginAtZero: true,
-        ticks: {
-          callback: function (value) {
-            return '₹' + Number(value).toLocaleString();
-          }
-        }
-      }
-    },
-    plugins: {
-      legend: {
-        position: 'top'
-      },
-      tooltip: {
-        callbacks: {
-          label: function (context) {
-            return `${context.dataset.label}: ₹${context.parsed.y.toLocaleString()}`;
-          }
-        }
-      }
-    }
-  };
+  barChartData: ChartData<'bar'> = { labels: [], datasets: [] };
+  barChartOptions: ChartConfiguration['options'] = this.lineChartOptions;
 
   constructor(private dexieService: DexieService) { }
 
   async ngOnInit() {
-    await this.loadAnalyticsData();
+    this.setDateRange('last30Days');
+    this.rangeForm.valueChanges.subscribe(value => {
+      if (value.start && value.end) {
+        this.currentDateRange.start = value.start;
+        this.currentDateRange.end = value.end;
+        this.loadSummaryData();
+      }
+    });
   }
 
-  async loadAnalyticsData() {
+  setDateRange = (preset: string) => {
+    const end = new Date();
+    const start = new Date();
+
+    switch (preset) {
+      case 'last7Days': start.setDate(end.getDate() - 7); break;
+      case 'last30Days': start.setDate(end.getDate() - 30); break;
+      case 'last3Months': start.setMonth(end.getMonth() - 3); break;
+      case 'lastYear': start.setFullYear(end.getFullYear() - 1); break;
+      case 'allTime': start.setFullYear(2020, 0, 1); break;
+    }
+
+    this.currentDateRange = { start, end };
+    this.rangeForm.patchValue({ start, end });
+    this.loadSummaryData();
+  };
+
+  getDateRangeDays = (): number => {
+    if (!this.currentDateRange.start || !this.currentDateRange.end) return 0;
+    const diffTime = Math.abs(this.currentDateRange.end.getTime() - this.currentDateRange.start.getTime());
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  };
+
+  toggleChart = (chartName: keyof typeof this.chartVisibility) => {
+    this.chartVisibility[chartName] = !this.chartVisibility[chartName];
+    if (this.chartVisibility[chartName]) {
+      this.generateSpecificChart(chartName);
+    }
+  };
+
+  private filterTransactionsByDateRange = (transactions: Transaction[]): Transaction[] => {
+    return transactions.filter(t => {
+      const transactionDate = new Date(t.date);
+      return transactionDate >= this.currentDateRange.start! &&
+        transactionDate <= this.currentDateRange.end!;
+    });
+  };
+
+  private generateMonthsMap = (startDate: Date, endDate: Date, formatOptions: Intl.DateTimeFormatOptions) => {
+    const monthsMap = new Map<string, { income: number; expenses: number }>();
+    const current = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+
+    while (current <= endDate) {
+      const monthKey = current.toLocaleDateString('en-US', formatOptions);
+      monthsMap.set(monthKey, { income: 0, expenses: 0 });
+      current.setMonth(current.getMonth() + 1);
+    }
+    return monthsMap;
+  };
+
+  private async loadSummaryData() {
     try {
-      const [transactions, categories] = await Promise.all([
+      const allTransactions = await this.dexieService.getAllTransactions();
+      const filteredTransactions = this.filterTransactionsByDateRange(allTransactions);
+      this.calculateSummaryStats(filteredTransactions);
+    } catch (error) {
+      console.error('Error loading summary data:', error);
+    }
+  }
+
+  private async generateSpecificChart(chartName: keyof typeof this.chartVisibility) {
+    try {
+      const [allTransactions, categories] = await Promise.all([
         this.dexieService.getAllTransactions(),
         this.dexieService.getAllCategories()
       ]);
 
-      this.calculateSummaryStats(transactions);
-      this.generateCategoryChart(transactions, categories);
-      this.generateMonthlyTrendsChart(transactions);
-      this.generateIncomeVsExpensesChart(transactions);
-      this.calculateTopCategories(transactions, categories);
+      const filteredTransactions = this.filterTransactionsByDateRange(allTransactions);
 
+      switch (chartName) {
+        case 'categoryChart': this.generateCategoryChart(filteredTransactions, categories); break;
+        case 'monthlyTrends': this.generateMonthlyTrendsChart(filteredTransactions); break;
+        case 'incomeVsExpenses': this.generateIncomeVsExpensesChart(filteredTransactions); break;
+        case 'topCategories': this.calculateTopCategories(filteredTransactions, categories); break;
+      }
     } catch (error) {
-      console.error('Error loading analytics data:', error);
+      console.error(`Error loading ${chartName} data:`, error);
     }
   }
 
-  calculateSummaryStats(transactions: Transaction[]) {
-    this.totalIncome = transactions
-      .filter(t => t.type === 'income')
-      .reduce((sum, t) => sum + t.amount, 0);
-
-    this.totalExpenses = transactions
-      .filter(t => t.type === 'expense')
-      .reduce((sum, t) => sum + t.amount, 0);
-
+  private calculateSummaryStats(transactions: Transaction[]) {
+    this.totalIncome = transactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
+    this.totalExpenses = transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
     this.netBalance = this.totalIncome - this.totalExpenses;
   }
 
-  generateCategoryChart(transactions: Transaction[], categories: Category[]) {
+  private generateCategoryChart(transactions: Transaction[], categories: Category[]) {
     const expenseTransactions = transactions.filter(t => t.type === 'expense');
     const categoryTotals: { [key: string]: number } = {};
     const categoryColors: { [key: string]: string } = {};
 
-    // Group by category
-    expenseTransactions.forEach(t => {
-      categoryTotals[t.category] = (categoryTotals[t.category] || 0) + t.amount;
-    });
+    expenseTransactions.forEach(t => categoryTotals[t.category] = (categoryTotals[t.category] || 0) + t.amount);
+    categories.forEach(cat => categoryColors[cat.name] = cat.color);
 
-    // Get colors from categories
-    categories.forEach(cat => {
-      categoryColors[cat.name] = cat.color;
-    });
+    const sortedCategories = Object.entries(categoryTotals).sort(([, a], [, b]) => b - a).slice(0, 8);
 
-    // Prepare chart data
-    const sortedCategories = Object.entries(categoryTotals)
-      .sort(([, a], [, b]) => b - a)
-      .slice(0, 8);
-
-    // Fix: Update datasets[0] directly, not the entire object
     this.pieChartData.labels = sortedCategories.map(([name]) => name);
     this.pieChartData.datasets[0].data = sortedCategories.map(([, amount]) => amount);
     this.pieChartData.datasets[0].backgroundColor = sortedCategories.map(([name]) => categoryColors[name] || '#e0e0e0');
   }
 
-  generateMonthlyTrendsChart(transactions: Transaction[]) {
-    const months: string[] = [];
-    const incomeData: number[] = [];
-    const expenseData: number[] = [];
+  private generateMonthlyTrendsChart(transactions: Transaction[]) {
+    const monthsMap = this.generateMonthsMap(
+      this.currentDateRange.start!,
+      this.currentDateRange.end!,
+      { month: 'short', year: 'numeric' }
+    );
 
-    for (let i = 5; i >= 0; i--) {
-      const date = new Date();
-      date.setMonth(date.getMonth() - i);
-      const monthKey = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-      months.push(monthKey);
+    transactions.forEach(t => {
+      const transactionDate = new Date(t.date);
+      const monthKey = transactionDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
 
-      const monthTransactions = transactions.filter(t => {
-        const transactionDate = new Date(t.date);
-        return transactionDate.getMonth() === date.getMonth() &&
-          transactionDate.getFullYear() === date.getFullYear();
-      });
+      if (monthsMap.has(monthKey)) {
+        const monthData = monthsMap.get(monthKey)!;
+        if (t.type === 'income') monthData.income += t.amount;
+        else monthData.expenses += t.amount;
+      }
+    });
 
-      const monthIncome = monthTransactions
-        .filter(t => t.type === 'income')
-        .reduce((sum, t) => sum + t.amount, 0);
-
-      const monthExpenses = monthTransactions
-        .filter(t => t.type === 'expense')
-        .reduce((sum, t) => sum + t.amount, 0);
-
-      incomeData.push(monthIncome);
-      expenseData.push(monthExpenses);
-    }
+    const months = Array.from(monthsMap.keys());
+    const incomeData = Array.from(monthsMap.values()).map(v => v.income);
+    const expenseData = Array.from(monthsMap.values()).map(v => v.expenses);
 
     this.lineChartData = {
       labels: months,
       datasets: [
-        {
-          label: 'Income',
-          data: incomeData,
-          borderColor: '#4CAF50',
-          backgroundColor: 'rgba(76, 175, 80, 0.1)',
-          tension: 0.4,
-          fill: true
-        },
-        {
-          label: 'Expenses',
-          data: expenseData,
-          borderColor: '#f44336',
-          backgroundColor: 'rgba(244, 67, 54, 0.1)',
-          tension: 0.4,
-          fill: true
-        }
+        { label: 'Income', data: incomeData, borderColor: '#4CAF50', backgroundColor: 'rgba(76, 175, 80, 0.1)', tension: 0.4, fill: true },
+        { label: 'Expenses', data: expenseData, borderColor: '#f44336', backgroundColor: 'rgba(244, 67, 54, 0.1)', tension: 0.4, fill: true }
       ]
     };
   }
 
-  generateIncomeVsExpensesChart(transactions: Transaction[]) {
-    const months: string[] = [];
-    const incomeData: number[] = [];
-    const expenseData: number[] = [];
+  private generateIncomeVsExpensesChart(transactions: Transaction[]) {
+    const end = new Date(this.currentDateRange.end!);
+    const start = new Date(Math.max(
+      this.currentDateRange.start!.getTime(),
+      new Date(end.getFullYear(), end.getMonth() - 5, 1).getTime()
+    ));
 
-    for (let i = 2; i >= 0; i--) {
-      const date = new Date();
-      date.setMonth(date.getMonth() - i);
-      const monthKey = date.toLocaleDateString('en-US', { month: 'long' });
-      months.push(monthKey);
+    const monthsMap = this.generateMonthsMap(start, end, { month: 'long' });
 
-      const monthTransactions = transactions.filter(t => {
-        const transactionDate = new Date(t.date);
-        return transactionDate.getMonth() === date.getMonth() &&
-          transactionDate.getFullYear() === date.getFullYear();
-      });
+    transactions.forEach(t => {
+      const transactionDate = new Date(t.date);
+      const monthKey = transactionDate.toLocaleDateString('en-US', { month: 'long' });
 
-      const monthIncome = monthTransactions
-        .filter(t => t.type === 'income')
-        .reduce((sum, t) => sum + t.amount, 0);
+      if (monthsMap.has(monthKey)) {
+        const monthData = monthsMap.get(monthKey)!;
+        if (t.type === 'income') monthData.income += t.amount;
+        else monthData.expenses += t.amount;
+      }
+    });
 
-      const monthExpenses = monthTransactions
-        .filter(t => t.type === 'expense')
-        .reduce((sum, t) => sum + t.amount, 0);
-
-      incomeData.push(monthIncome);
-      expenseData.push(monthExpenses);
-    }
+    const months = Array.from(monthsMap.keys());
+    const incomeData = Array.from(monthsMap.values()).map(v => v.income);
+    const expenseData = Array.from(monthsMap.values()).map(v => v.expenses);
 
     this.barChartData = {
       labels: months,
       datasets: [
-        {
-          label: 'Income',
-          data: incomeData,
-          backgroundColor: '#4CAF50',
-          borderColor: '#4CAF50',
-          borderWidth: 1
-        },
-        {
-          label: 'Expenses',
-          data: expenseData,
-          backgroundColor: '#f44336',
-          borderColor: '#f44336',
-          borderWidth: 1
-        }
+        { label: 'Income', data: incomeData, backgroundColor: '#4CAF50', borderColor: '#4CAF50', borderWidth: 1 },
+        { label: 'Expenses', data: expenseData, backgroundColor: '#f44336', borderColor: '#f44336', borderWidth: 1 }
       ]
     };
   }
 
-  calculateTopCategories(transactions: Transaction[], categories: Category[]) {
+  private calculateTopCategories(transactions: Transaction[], categories: Category[]) {
     const expenseTransactions = transactions.filter(t => t.type === 'expense');
     const categoryTotals: { [key: string]: number } = {};
 
-    expenseTransactions.forEach(t => {
-      categoryTotals[t.category] = (categoryTotals[t.category] || 0) + t.amount;
-    });
+    expenseTransactions.forEach(t => categoryTotals[t.category] = (categoryTotals[t.category] || 0) + t.amount);
 
     this.topCategories = Object.entries(categoryTotals)
       .map(([name, amount]) => ({

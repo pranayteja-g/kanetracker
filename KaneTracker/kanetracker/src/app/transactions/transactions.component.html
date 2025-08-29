@@ -1,20 +1,20 @@
 <div class="transactions-container">
-  <h1 class="page-title">Transactions</h1>
-  
+  <!-- Header with Search Button -->
+  <div class="transactions-header">
+    <h1 class="page-title">Transactions</h1>
+    <button mat-icon-button (click)="navigateToSearch()" matTooltip="Search all transactions">
+      <mat-icon>search</mat-icon>
+    </button>
+  </div>
+
   <div class="transactions-list" *ngIf="transactions.length; else noData">
-    <button 
-      *ngFor="let tx of transactions" 
-      class="transaction-card clickable"
-      [style.background]="hexToRgba(getCategoryColor(tx.category))"
-      (click)="openTransactionDetails(tx)"
-      type="button"
+    <button *ngFor="let tx of transactions" class="transaction-card clickable"
+      [style.background]="hexToRgba(getCategoryColor(tx.category))" (click)="openTransactionDetails(tx)" type="button"
       [attr.aria-label]="'Transaction: ' + tx.category + ' ' + (tx.type === 'income' ? '+' : '-') + tx.amount">
-      
+
       <div class="transaction-header">
         <div class="category-info">
-          <div 
-            class="category-dot"
-            [style.background]="getCategoryColor(tx.category)">
+          <div class="category-dot" [style.background]="getCategoryColor(tx.category)">
           </div>
           <span class="category-name">{{ tx.category }}</span>
         </div>
@@ -23,7 +23,7 @@
           <mat-icon class="type-icon">{{ tx.type === 'income' ? 'trending_up' : 'trending_down' }}</mat-icon>
         </div>
       </div>
-      
+
       <div class="transaction-details">
         <p class="description">{{ tx.description || 'No description' }}</p>
         <span class="date">{{ tx.date | date:'MMM dd, yyyy' }}</span>
@@ -36,6 +36,11 @@
       <mat-icon class="no-data-icon">receipt_long</mat-icon>
       <p>No transactions yet</p>
       <span>Your transactions will appear here once you start logging them.</span>
+      <!-- Add search suggestion for empty state -->
+      <button mat-button routerLink="/search" class="search-suggestion">
+        <mat-icon>search</mat-icon>
+        Search existing transactions
+      </button>
     </div>
   </ng-template>
 </div>
