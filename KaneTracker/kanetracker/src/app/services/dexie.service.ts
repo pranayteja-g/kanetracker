@@ -28,9 +28,21 @@ export class DexieService extends Dexie {
     this.categories = this.table('categories');
   }
 
-  addTransaction(transaction: Transaction): Promise<number> {
-    return this.transactions.add(transaction);
+  async addTransaction(transaction: Transaction): Promise<number> {
+    try {
+      if (!transaction.amount || transaction.amount <= 0) {
+        throw new Error('Invalid transaction amount');
+      }
+      if (!transaction.category?.trim()) {
+        throw new Error('Transaction category is required');
+      }
+      return await this.transactions.add(transaction);
+    } catch (error) {
+      console.error('Error adding transaction:', error);
+      throw new Error('Failed to save transaction. Please try again.');
+    }
   }
+
 
   getAllTransactions(): Promise<Transaction[]> {
     return this.transactions.toArray();
@@ -48,8 +60,27 @@ export class DexieService extends Dexie {
     return this.categories.toArray();
   }
 
-  addCategory(category: Category): Promise<number> {
-    return this.categories.add(category);
+  async addCategory(category: Category): Promise<number> {
+    try {
+      if (!category.name?.trim()) {
+        throw new Error('Category name is required');
+      }
+
+      // Check for duplicate category names within the same type
+      const existingCategories = await this.getCategoriesByType(category.type);
+      const isDuplicate = existingCategories.some(
+        cat => cat.name.toLowerCase().trim() === category.name.toLowerCase().trim()
+      );
+
+      if (isDuplicate) {
+        throw new Error(`A ${category.type} category named "${category.name}" already exists`);
+      }
+
+      return await this.categories.add(category);
+    } catch (error) {
+      console.error('Error adding category:', error);
+      throw error; // Re-throw to preserve specific error messages
+    }
   }
 
   getCategoriesByType(type: 'income' | 'expense'): Promise<Category[]> {

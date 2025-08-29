@@ -1,5 +1,35 @@
 /* You can add global styles to this file, and also import other style files */
 
-html, body { height: 100%; margin: 0; padding: 0; overflow-x: hidden;}
-body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
+html,
+body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+}
 
+body {
+    margin: 0;
+    font-family: Roboto, "Helvetica Neue", sans-serif;
+}
+
+/* Enhanced Snackbar Styles */
+.success-snackbar {
+    background-color: #4caf50 !important;
+    color: white !important;
+}
+
+.error-snackbar {
+    background-color: #f44336 !important;
+    color: white !important;
+}
+
+.warning-snackbar {
+    background-color: #ff9800 !important;
+    color: white !important;
+}
+
+.info-snackbar {
+    background-color: #2196f3 !important;
+    color: white !important;
+}
