@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { Router } from '@angular/router'; // Add Router import
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
@@ -35,25 +36,40 @@ import { Transaction } from '../models/transaction.interface';
 export class TransactionFormComponent implements OnInit {
   transactionForm!: FormGroup;
   categories: Category[] = [];
-  selectedType: 'income' | 'expense' = 'expense'; // default
+  selectedType: 'income' | 'expense' = 'expense';
 
   constructor(
     private fb: FormBuilder, 
     private dexieService: DexieService,
-    private snackBar: MatSnackBar  
-  
+    private snackBar: MatSnackBar,
+    private router: Router // Add Router to constructor
   ) { }
 
   async ngOnInit() {
     this.transactionForm = this.fb.group({
       amount: [null, [Validators.required, Validators.min(1)]],
       category: ['', Validators.required],
-      date: [new Date()], // default to today
+      date: [new Date()],
       description: [''],
-      type: ['expense'] // default
+      type: ['expense']
     });
 
-    this.categories = await this.dexieService.categories.toArray();
+    // Load categories and filter by type when type changes
+    await this.loadCategories();
+    
+    // Listen for type changes to filter categories
+    this.transactionForm.get('type')?.valueChanges.subscribe(() => {
+      this.loadCategories();
+      this.transactionForm.patchValue({ category: '' }); // Reset category selection
+    });
+  }
+
+  async loadCategories() {
+    const allCategories = await this.dexieService.getAllCategories();
+    const selectedType = this.transactionForm.get('type')?.value || 'expense';
+    
+    // Filter categories by type
+    this.categories = allCategories.filter(cat => cat.type === selectedType);
   }
 
   async onSubmit() {
@@ -61,23 +77,34 @@ export class TransactionFormComponent implements OnInit {
       const transaction: Transaction = this.transactionForm.value;
       await this.dexieService.addTransaction(transaction);
 
-      // show confirmation
+      // Show confirmation
       this.snackBar.open('Transaction logged successfully ✅', 'Close', {
-        duration: 3000,
+        duration: 2000, // Reduced duration since we're redirecting
         horizontalPosition: 'right',
-        verticalPosition: 'top'
+        verticalPosition: 'bottom'
       });
 
-      this.transactionForm.reset({ date: new Date(), type: 'expense' });
+      // Redirect to dashboard after brief delay
+      setTimeout(() => {
+        this.router.navigate(['/dashboard']);
+      }, 1500);
     }
   }
 
   async addCategory() {
     const name = prompt('Enter new category name:');
     if (name) {
-      const color = '#' + Math.floor(Math.random() * 16777215).toString(16); // random color
-      const id = await this.dexieService.categories.add({ name, color });
-      this.categories = await this.dexieService.categories.toArray();
+      const selectedType = this.transactionForm.get('type')?.value || 'expense';
+      const color = '#' + Math.floor(Math.random() * 16777215).toString(16);
+      
+      // Add category with type
+      await this.dexieService.addCategory({ 
+        name, 
+        color, 
+        type: selectedType as 'income' | 'expense' 
+      });
+      
+      await this.loadCategories();
       this.transactionForm.patchValue({ category: name });
     }
   }

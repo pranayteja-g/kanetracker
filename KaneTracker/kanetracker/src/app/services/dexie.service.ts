@@ -10,12 +10,18 @@ export class DexieService extends Dexie {
   transactions: Dexie.Table<Transaction, number>;
   categories!: Dexie.Table<Category, number>;
 
-
   constructor() {
     super('KaneTrackerDB');
-    this.version(1).stores({
+    this.version(2).stores({ // Increment version for schema change
       transactions: '++id, amount, category, date, description, type',
-      categories: '++id, name, color'
+      categories: '++id, name, color, type' // Add type to schema
+    }).upgrade(tx => {
+      // Migration: add type field to existing categories
+      return tx.table('categories').toCollection().modify(category => {
+        if (!category.type) {
+          category.type = 'expense'; // Default existing categories to expense
+        }
+      });
     });
 
     this.transactions = this.table('transactions');
@@ -40,5 +46,39 @@ export class DexieService extends Dexie {
 
   getAllCategories(): Promise<Category[]> {
     return this.categories.toArray();
+  }
+
+  addCategory(category: Category): Promise<number> {
+    return this.categories.add(category);
+  }
+
+  getCategoriesByType(type: 'income' | 'expense'): Promise<Category[]> {
+    return this.categories.where('type').equals(type).toArray();
+  }
+
+  async deleteCategory(categoryId: number): Promise<boolean> {
+    // Check if category is being used in any transactions
+    const categoryToDelete = await this.categories.get(categoryId);
+    if (!categoryToDelete) return false;
+
+    const transactionsUsingCategory = await this.transactions
+      .where('category')
+      .equals(categoryToDelete.name)
+      .count();
+
+    if (transactionsUsingCategory > 0) {
+      throw new Error(`Cannot delete category "${categoryToDelete.name}" because it's used in ${transactionsUsingCategory} transaction(s).`);
+    }
+
+    // Safe to delete
+    await this.categories.delete(categoryId);
+    return true;
+  }
+
+  async getCategoryUsageCount(categoryName: string): Promise<number> {
+    return await this.transactions
+      .where('category')
+      .equals(categoryName)
+      .count();
   }
 }

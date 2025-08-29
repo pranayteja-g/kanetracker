@@ -1,1 +1,114 @@
-<p>dashboard works!</p>
+<div class="dashboard-container">
+    <h1 class="dashboard-title">Financial Overview</h1>
+
+<!-- Balance Cards -->
+<div class="balance-section">
+    <div class="balance-card total" [class.positive]="totalBalance >= 0" [class.negative]="totalBalance < 0">
+        <div class="balance-header">
+            <mat-icon>account_balance_wallet</mat-icon>
+            <h3>Total Balance</h3>
+        </div>
+        <p class="balance-amount">₹{{ totalBalance | number:'1.2-2' }}</p>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card income">
+            <mat-icon>trending_up</mat-icon>
+            <div class="stat-info">
+                <span class="stat-label">Total Income</span>
+                <span class="stat-value">₹{{ totalIncome | number:'1.2-2' }}</span>
+            </div>
+        </div>
+
+        <div class="stat-card expense">
+            <mat-icon>trending_down</mat-icon>
+            <div class="stat-info">
+                <span class="stat-label">Total Expenses</span>
+                <span class="stat-value">₹{{ totalExpenses | number:'1.2-2' }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+    <!-- Monthly Stats -->
+    <div class="monthly-section">
+        <h2>{{ monthlyStats.currentMonth }} Overview</h2>
+        <div class="monthly-cards">
+            <div class="monthly-card">
+                <div class="monthly-header">
+                    <mat-icon class="income-icon">add_circle</mat-icon>
+                    <span>Income</span>
+                </div>
+                <p class="monthly-amount income">₹{{ monthlyStats.income | number:'1.2-2' }}</p>
+            </div>
+
+            <div class="monthly-card">
+                <div class="monthly-header">
+                    <mat-icon class="expense-icon">remove_circle</mat-icon>
+                    <span>Expenses</span>
+                </div>
+                <p class="monthly-amount expense">₹{{ monthlyStats.expenses | number:'1.2-2' }}</p>
+            </div>
+
+            <div class="monthly-card">
+                <div class="monthly-header">
+                    <mat-icon>savings</mat-icon>
+                    <span>Net</span>
+                </div>
+                <p class="monthly-amount" [class.positive]="(monthlyStats.income - monthlyStats.expenses) >= 0"
+                    [class.negative]="(monthlyStats.income - monthlyStats.expenses) < 0">
+                    ₹{{ (monthlyStats.income - monthlyStats.expenses) | number:'1.2-2' }}
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Categories -->
+    <div class="categories-section" *ngIf="topCategories.length > 0">
+        <h2>Top Spending Categories</h2>
+        <div class="categories-list">
+            <div *ngFor="let category of topCategories" class="category-item"
+                [style.background]="hexToRgba(category.color)">
+                <div class="category-info">
+                    <div class="category-dot" [style.background]="category.color"></div>
+                    <span class="category-name">{{ category.name }}</span>
+                </div>
+                <span class="category-amount">₹{{ category.amount | number:'1.2-2' }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Transactions -->
+    <div class="recent-section" *ngIf="recentTransactions.length > 0">
+        <div class="section-header">
+            <h2>Recent Transactions</h2>
+            <button mat-button color="primary" routerLink="/transactions">View All</button>
+        </div>
+        <div class="recent-list">
+            <div *ngFor="let tx of recentTransactions" class="recent-item">
+                <div class="recent-info">
+                    <span class="recent-category">{{ tx.category }}</span>
+                    <span class="recent-desc">{{ tx.description || 'No description' }}</span>
+                </div>
+                <div class="recent-amount" [ngClass]="tx.type">
+                    {{ tx.type === 'income' ? '+' : '-' }}₹{{ tx.amount | number:'1.2-2' }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions
+    <div class="bottom-nav">
+        <button mat-button class="nav-item" routerLink="/dashboard">
+            <mat-icon>dashboard</mat-icon>
+            <span>Dashboard</span>
+        </button>
+        <button mat-raised-button color="primary" class="nav-item add-btn" routerLink="/transaction-form">
+            <mat-icon>add</mat-icon>
+            <span>Add</span>
+        </button>
+        <button mat-button class="nav-item" routerLink="/transactions">
+            <mat-icon>list</mat-icon>
+            <span>Transactions</span>
+        </button>
+    </div> -->
