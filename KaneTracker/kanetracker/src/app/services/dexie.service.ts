@@ -81,4 +81,9 @@ export class DexieService extends Dexie {
       .equals(categoryName)
       .count();
   }
+
+  async updateCategory(categoryId: number, categoryData: Partial<Category>): Promise<number> {
+    return this.categories.update(categoryId, categoryData);
+  }
+
 }

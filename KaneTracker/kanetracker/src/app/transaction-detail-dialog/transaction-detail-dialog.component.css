@@ -1,0 +1,86 @@
+.dialog-container {
+  width: 100%;
+  max-width: 500px;
+}
+
+.dialog-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.dialog-header h2 {
+  margin: 0;
+  color: #1976d2;
+}
+
+.dialog-content {
+  min-height: 300px;
+}
+
+.full-width {
+  width: 100%;
+  margin-bottom: 16px;
+}
+
+.color-dot {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  margin-right: 8px;
+}
+
+.transaction-details {
+  padding: 16px 0;
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.detail-row:last-child {
+  border-bottom: none;
+}
+
+.detail-label {
+  font-weight: 500;
+  color: #666;
+}
+
+.detail-value {
+  font-weight: 600;
+  color: #333;
+}
+
+.detail-value.income {
+  color: #4CAF50;
+}
+
+.detail-value.expense {
+  color: #f44336;
+}
+
+.dialog-actions {
+  padding-top: 16px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.action-buttons button {
+  min-width: 100px;
+}
+
+mat-button-toggle-group {
+  margin-bottom: 16px;
+}

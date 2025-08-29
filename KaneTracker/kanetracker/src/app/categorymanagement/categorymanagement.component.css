@@ -5,10 +5,23 @@
   padding-bottom: 100px;
 }
 
-h1 {
-  text-align: center;
-  color: #1976d2;
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 32px;
+}
+
+h1 {
+  color: #1976d2;
+  margin: 0;
+}
+
+.add-fab {
+  position: fixed;
+  bottom: 90px;
+  right: 24px;
+  z-index: 1000;
 }
 
 .categories-section {
@@ -41,25 +54,36 @@ h1 {
 .category-info {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
 }
 
 .category-dot {
-  width: 16px;
-  height: 16px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.category-details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .category-name {
-  font-weight: 500;
+  font-weight: 600;
   color: #333;
   font-size: 1rem;
 }
 
 .usage-count {
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   color: #666;
-  font-style: italic;
+}
+
+.category-actions {
+  display: flex;
+  gap: 8px;
 }
 
 .no-categories {
@@ -74,6 +98,14 @@ button[disabled] {
   cursor: not-allowed;
 }
 
-button:not([disabled]):hover {
-  background-color: rgba(244, 67, 54, 0.1);
+@media (max-width: 600px) {
+  .header {
+    flex-direction: column;
+    gap: 16px;
+  }
+  
+  .add-fab {
+    bottom: 100px;
+    right: 16px;
+  }
 }

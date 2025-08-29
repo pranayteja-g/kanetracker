@@ -2,10 +2,13 @@
   <h1 class="page-title">Transactions</h1>
   
   <div class="transactions-list" *ngIf="transactions.length; else noData">
-    <div 
+    <button 
       *ngFor="let tx of transactions" 
-      class="transaction-card"
-      [style.background]="hexToRgba(getCategoryColor(tx.category))">
+      class="transaction-card clickable"
+      [style.background]="hexToRgba(getCategoryColor(tx.category))"
+      (click)="openTransactionDetails(tx)"
+      type="button"
+      [attr.aria-label]="'Transaction: ' + tx.category + ' ' + (tx.type === 'income' ? '+' : '-') + tx.amount">
       
       <div class="transaction-header">
         <div class="category-info">
@@ -16,7 +19,7 @@
           <span class="category-name">{{ tx.category }}</span>
         </div>
         <div class="transaction-amount" [ngClass]="tx.type">
-          <span class="currency">{{ tx.type === 'income' ? '+' : '-' }}{{ tx.amount | currency }}</span>
+          <span class="currency">{{ tx.type === 'income' ? '+' : '-' }}₹{{ tx.amount | number:'1.2-2' }}</span>
           <mat-icon class="type-icon">{{ tx.type === 'income' ? 'trending_up' : 'trending_down' }}</mat-icon>
         </div>
       </div>
@@ -25,13 +28,7 @@
         <p class="description">{{ tx.description || 'No description' }}</p>
         <span class="date">{{ tx.date | date:'MMM dd, yyyy' }}</span>
       </div>
-      
-      <div class="transaction-actions">
-        <button mat-icon-button class="delete-btn" (click)="deleteTransaction(tx.id)">
-          <mat-icon>delete_outline</mat-icon>
-        </button>
-      </div>
-    </div>
+    </button>
   </div>
 
   <ng-template #noData>

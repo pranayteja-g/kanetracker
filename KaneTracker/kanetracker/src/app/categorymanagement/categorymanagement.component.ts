@@ -7,12 +7,25 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { DexieService } from '../services/dexie.service';
 import { Category } from '../models/category.interface';
+import { CategoryDialogComponent } from '../category-dialog/category-dialog.component';
+
 @Component({
   selector: 'app-categorymanagement',
-  imports: [CommonModule, MatCardModule, MatIconModule, MatButtonModule, MatDialogModule],
+  imports: [
+    CommonModule, 
+    MatCardModule, 
+    MatIconModule, 
+    MatButtonModule, // FAB is part of MatButtonModule
+    MatDialogModule
+  ],
   template: `
     <div class="categories-container">
-      <h1>Manage Categories</h1>
+      <div class="header">
+        <h1>Manage Categories</h1>
+        <button mat-fab color="primary" class="add-fab" (click)="createCategory()">
+          <mat-icon>add</mat-icon>
+        </button>
+      </div>
       
       <div class="categories-section">
         <h2>Income Categories</h2>
@@ -20,13 +33,20 @@ import { Category } from '../models/category.interface';
           <div *ngFor="let category of incomeCategories" class="category-card">
             <div class="category-info">
               <div class="category-dot" [style.background]="category.color"></div>
-              <span class="category-name">{{ category.name }}</span>
-              <span class="usage-count">({{ getCategoryUsage(category.name) }} transactions)</span>
+              <div class="category-details">
+                <span class="category-name">{{ category.name }}</span>
+                <span class="usage-count">{{ getCategoryUsage(category.name) }} transactions</span>
+              </div>
             </div>
-            <button mat-icon-button color="warn" (click)="deleteCategory(category)" 
-                    [disabled]="getCategoryUsage(category.name) > 0">
-              <mat-icon>delete</mat-icon>
-            </button>
+            <div class="category-actions">
+              <button mat-icon-button (click)="editCategory(category)">
+                <mat-icon>edit</mat-icon>
+              </button>
+              <button mat-icon-button color="warn" (click)="deleteCategory(category)" 
+                      [disabled]="getCategoryUsage(category.name) > 0">
+                <mat-icon>delete</mat-icon>
+              </button>
+            </div>
           </div>
         </div>
         <ng-template #noIncomeCategories>
@@ -40,13 +60,20 @@ import { Category } from '../models/category.interface';
           <div *ngFor="let category of expenseCategories" class="category-card">
             <div class="category-info">
               <div class="category-dot" [style.background]="category.color"></div>
-              <span class="category-name">{{ category.name }}</span>
-              <span class="usage-count">({{ getCategoryUsage(category.name) }} transactions)</span>
+              <div class="category-details">
+                <span class="category-name">{{ category.name }}</span>
+                <span class="usage-count">{{ getCategoryUsage(category.name) }} transactions</span>
+              </div>
             </div>
-            <button mat-icon-button color="warn" (click)="deleteCategory(category)"
-                    [disabled]="getCategoryUsage(category.name) > 0">
-              <mat-icon>delete</mat-icon>
-            </button>
+            <div class="category-actions">
+              <button mat-icon-button (click)="editCategory(category)">
+                <mat-icon>edit</mat-icon>
+              </button>
+              <button mat-icon-button color="warn" (click)="deleteCategory(category)"
+                      [disabled]="getCategoryUsage(category.name) > 0">
+                <mat-icon>delete</mat-icon>
+              </button>
+            </div>
           </div>
         </div>
         <ng-template #noExpenseCategories>
@@ -87,6 +114,34 @@ export class CategorymanagementComponent implements OnInit {
     return this.categoryUsage[categoryName] || 0;
   }
 
+  createCategory() {
+    const dialogRef = this.dialog.open(CategoryDialogComponent, {
+      width: '90vw',
+      maxWidth: '450px',
+      data: {}
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result?.success) {
+        this.loadCategories();
+      }
+    });
+  }
+
+  editCategory(category: Category) {
+    const dialogRef = this.dialog.open(CategoryDialogComponent, {
+      width: '90vw',
+      maxWidth: '450px',
+      data: { category }
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result?.success) {
+        this.loadCategories();
+      }
+    });
+  }
+
   async deleteCategory(category: Category) {
     const usageCount = this.getCategoryUsage(category.name);
 
@@ -106,7 +161,7 @@ export class CategorymanagementComponent implements OnInit {
         this.snackBar.open(`Category "${category.name}" deleted successfully`, 'Close', {
           duration: 2000
         });
-        await this.loadCategories(); // Refresh the list
+        await this.loadCategories();
       } catch (error: any) {
         this.snackBar.open(error.message || 'Failed to delete category', 'Close', {
           duration: 4000

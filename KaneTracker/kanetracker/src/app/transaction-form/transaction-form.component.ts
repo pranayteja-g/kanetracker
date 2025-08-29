@@ -10,10 +10,12 @@ import { MatNativeDateModule } from '@angular/material/core';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatDividerModule } from '@angular/material/divider';
+import { MatDialog } from '@angular/material/dialog';
 import { CommonModule } from '@angular/common';
 import { Category } from '../models/category.interface';
 import { DexieService } from '../services/dexie.service';
 import { Transaction } from '../models/transaction.interface';
+import { CategoryDialogComponent } from '../category-dialog/category-dialog.component';
 
 @Component({
   selector: 'app-transaction-form',
@@ -28,7 +30,7 @@ import { Transaction } from '../models/transaction.interface';
     MatDatepickerModule,
     MatNativeDateModule,
     MatButtonToggleModule,
-    MatDividerModule,
+    MatDividerModule
   ],
   templateUrl: './transaction-form.component.html',
   styleUrls: ['./transaction-form.component.css']
@@ -39,10 +41,11 @@ export class TransactionFormComponent implements OnInit {
   selectedType: 'income' | 'expense' = 'expense';
 
   constructor(
-    private fb: FormBuilder, 
+    private fb: FormBuilder,
     private dexieService: DexieService,
     private snackBar: MatSnackBar,
-    private router: Router // Add Router to constructor
+    private router: Router,
+    private dialog: MatDialog
   ) { }
 
   async ngOnInit() {
@@ -56,7 +59,7 @@ export class TransactionFormComponent implements OnInit {
 
     // Load categories and filter by type when type changes
     await this.loadCategories();
-    
+
     // Listen for type changes to filter categories
     this.transactionForm.get('type')?.valueChanges.subscribe(() => {
       this.loadCategories();
@@ -67,7 +70,7 @@ export class TransactionFormComponent implements OnInit {
   async loadCategories() {
     const allCategories = await this.dexieService.getAllCategories();
     const selectedType = this.transactionForm.get('type')?.value || 'expense';
-    
+
     // Filter categories by type
     this.categories = allCategories.filter(cat => cat.type === selectedType);
   }
@@ -91,22 +94,28 @@ export class TransactionFormComponent implements OnInit {
     }
   }
 
-  async addCategory() {
-    const name = prompt('Enter new category name:');
-    if (name) {
-      const selectedType = this.transactionForm.get('type')?.value || 'expense';
-      const color = '#' + Math.floor(Math.random() * 16777215).toString(16);
-      
-      // Add category with type
-      await this.dexieService.addCategory({ 
-        name, 
-        color, 
-        type: selectedType as 'income' | 'expense' 
-      });
-      
-      await this.loadCategories();
-      this.transactionForm.patchValue({ category: name });
-    }
+  // Replace the existing addCategory method with this:
+
+  addCategory() {
+    const selectedType = this.transactionForm.get('type')?.value || 'expense';
+
+    const dialogRef = this.dialog.open(CategoryDialogComponent, {
+      width: '90vw',
+      maxWidth: '450px',
+      data: { category: { type: selectedType } }
+    });
+
+    dialogRef.afterClosed().subscribe(async (result) => {
+      if (result?.success) {
+        await this.loadCategories();
+        // Auto-select the newly created category if possible
+        const categories = await this.dexieService.getCategoriesByType(selectedType);
+        const newCategory = categories[categories.length - 1];
+        if (newCategory) {
+          this.transactionForm.patchValue({ category: newCategory.name });
+        }
+      }
+    });
   }
 
   selectType(type: 'income' | 'expense') {
