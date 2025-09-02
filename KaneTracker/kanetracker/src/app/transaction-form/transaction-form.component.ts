@@ -1,4 +1,4 @@
-import { Component, OnInit, AfterViewInit, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, AfterViewInit, ChangeDetectorRef, OnDestroy } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, AbstractControl } from '@angular/forms';
 import { Router } from '@angular/router';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -14,12 +14,15 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatIconModule } from '@angular/material/icon';
 import { CommonModule } from '@angular/common';
 import { MatDialog } from '@angular/material/dialog';
+import { MatCardModule } from '@angular/material/card';
+import { Subject, debounceTime, takeUntil } from 'rxjs';
+
 import { CategoryDialogComponent } from '../category-dialog/category-dialog.component';
 import { Category } from '../models/category.interface';
 import { DexieService } from '../services/dexie.service';
 import { Transaction } from '../models/transaction.interface';
 
-// Custom Validators (keep your existing ones)
+// Custom Validators
 export class CustomValidators {
   static futureDate(control: AbstractControl): { [key: string]: any } | null {
     if (!control.value) return null;
@@ -51,9 +54,12 @@ export class CustomValidators {
     if (!control.value) return null;
 
     const isWhitespace = (control.value || '').trim().length === 0;
-    const isValid = !isWhitespace;
-    return isValid ? null : { 'whitespace': true };
+    return isWhitespace ? { 'whitespace': true } : null;
   }
+}
+
+interface FormErrors {
+  [key: string]: string[];
 }
 
 @Component({
@@ -71,17 +77,21 @@ export class CustomValidators {
     MatButtonToggleModule,
     MatDividerModule,
     MatProgressSpinnerModule,
-    MatIconModule
+    MatIconModule,
+    MatCardModule
   ],
   templateUrl: './transaction-form.component.html',
   styleUrls: ['./transaction-form.component.css']
 })
-export class TransactionFormComponent implements OnInit, AfterViewInit {
+export class TransactionFormComponent implements OnInit, AfterViewInit, OnDestroy {
   transactionForm!: FormGroup;
   categories: Category[] = [];
   selectedType: 'income' | 'expense' = 'expense';
-  isLoading = false;
+  isLoadingCategories = false;
   isSubmitting = false;
+
+  private destroy$ = new Subject<void>();
+  private readonly LARGE_AMOUNT_THRESHOLD = 100000;
 
   constructor(
     private fb: FormBuilder,
@@ -89,24 +99,28 @@ export class TransactionFormComponent implements OnInit, AfterViewInit {
     private snackBar: MatSnackBar,
     private router: Router,
     private dialog: MatDialog,
-    private cdr: ChangeDetectorRef // Add ChangeDetectorRef
+    private cdr: ChangeDetectorRef
   ) { }
 
-  async ngOnInit() {
+  async ngOnInit(): Promise<void> {
     this.initializeForm();
     await this.loadCategories();
     this.setupFormValueChanges();
   }
 
-  ngAfterViewInit() {
-    // Trigger change detection to avoid ExpressionChangedAfterChecked errors
+  ngAfterViewInit(): void {
     this.cdr.detectChanges();
   }
 
-  initializeForm() {
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  private initializeForm(): void {
     this.transactionForm = this.fb.group({
       amount: [
-        { value: null, disabled: false }, // Set disabled state in FormControl constructor
+        null,
         [
           Validators.required,
           Validators.min(0.01),
@@ -114,68 +128,66 @@ export class TransactionFormComponent implements OnInit, AfterViewInit {
           CustomValidators.reasonableAmount
         ]
       ],
-      category: [{ value: '', disabled: false }, Validators.required], // Fixed: set disabled in constructor
+      category: ['', Validators.required],
       date: [
-        { value: new Date(), disabled: false }, // Fixed: set disabled in constructor
+        new Date(),
         [
           Validators.required,
           CustomValidators.futureDate
         ]
       ],
       description: [
-        { value: '', disabled: false }, // Fixed: set disabled in constructor
+        '',
         [
           Validators.maxLength(200),
           CustomValidators.noWhitespace
         ]
       ],
-      type: [{ value: 'expense', disabled: false }, Validators.required] // Fixed: set disabled in constructor
+      type: ['expense', Validators.required]
     });
   }
 
-  setupFormValueChanges() {
-    // Listen for type changes to filter categories
-    this.transactionForm.get('type')?.valueChanges.subscribe((type) => {
-      this.selectedType = type;
-      this.loadCategories();
-      this.transactionForm.patchValue({ category: '' });
-    });
+  private setupFormValueChanges(): void {
+    // Listen for type changes
+    this.transactionForm.get('type')?.valueChanges
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((type: 'income' | 'expense') => {
+        this.selectedType = type;
+        this.loadCategories();
+        this.transactionForm.patchValue({ category: '' }, { emitEvent: false });
+      });
 
-    // Real-time amount validation feedback
-    this.transactionForm.get('amount')?.valueChanges.subscribe((amount) => {
-      if (amount && amount > 100000) {
-        this.showWarning('Large amount detected. Please verify the amount is correct.');
-      }
-    });
+    // Debounced amount validation
+    this.transactionForm.get('amount')?.valueChanges
+      .pipe(
+        debounceTime(500),
+        takeUntil(this.destroy$)
+      )
+      .subscribe((amount: number) => {
+        if (amount && amount > this.LARGE_AMOUNT_THRESHOLD) {
+          this.showNotification('Large amount detected. Please verify the amount is correct.', 'warning');
+        }
+      });
   }
 
-  async loadCategories() {
+  async loadCategories(): Promise<void> {
     try {
-      this.isLoading = true;
-
-      // Control loading state programmatically instead of using [disabled] in template
-      this.transactionForm.get('category')?.disable();
-
+      this.isLoadingCategories = true;
       const allCategories = await this.dexieService.getAllCategories();
-      const selectedType = this.transactionForm.get('type')?.value || 'expense';
-      this.categories = allCategories.filter(cat => cat.type === selectedType);
-
-      // Re-enable after loading
-      this.transactionForm.get('category')?.enable();
+      this.categories = allCategories.filter(cat => cat.type === this.selectedType);
 
       if (this.categories.length === 0) {
-        this.showInfo(`No ${selectedType} categories found. Create one to get started!`);
+        this.showNotification(`No ${this.selectedType} categories found. Create one to get started!`, 'info');
       }
     } catch (error) {
-      this.showError('Failed to load categories. Please try again.');
-      this.transactionForm.get('category')?.enable(); // Re-enable on error
+      console.error('Failed to load categories:', error);
+      this.showNotification('Failed to load categories. Please try again.', 'error');
     } finally {
-      this.isLoading = false;
+      this.isLoadingCategories = false;
     }
   }
 
-
-  async onSubmit() {
+  async onSubmit(): Promise<void> {
     if (this.transactionForm.invalid) {
       this.markAllFieldsAsTouched();
       this.showValidationErrors();
@@ -184,9 +196,8 @@ export class TransactionFormComponent implements OnInit, AfterViewInit {
 
     try {
       this.isSubmitting = true;
-
-      // Sanitize and prepare transaction data
       const formValue = this.transactionForm.value;
+
       const transaction: Transaction = {
         amount: Number(formValue.amount),
         category: formValue.category.trim(),
@@ -196,137 +207,131 @@ export class TransactionFormComponent implements OnInit, AfterViewInit {
       };
 
       await this.dexieService.addTransaction(transaction);
-
-      this.showSuccess('Transaction saved successfully! 🎉');
+      this.showNotification('Transaction saved successfully! 🎉', 'success');
 
       // Reset form with smart defaults
-      this.transactionForm.reset({
-        date: new Date(),
-        type: formValue.type, // Keep same type
-        category: formValue.category // Keep same category
-      });
+      this.resetFormWithDefaults(formValue);
 
-      // Navigate back to dashboard
+      // Navigate back after success
       setTimeout(() => {
         this.router.navigate(['/dashboard']);
-      }, 1000);
+      }, 1500);
 
     } catch (error: any) {
-      this.showError('Failed to save transaction. Please try again.');
       console.error('Transaction save error:', error);
+      this.showNotification('Failed to save transaction. Please try again.', 'error');
     } finally {
       this.isSubmitting = false;
     }
   }
 
-  async addCategory() {
-    const selectedType = this.transactionForm.get('type')?.value || 'expense';
-
+  async addCategory(): Promise<void> {
     const dialogRef = this.dialog.open(CategoryDialogComponent, {
       width: '90vw',
       maxWidth: '450px',
-      data: { category: { type: selectedType } }
+      data: { category: { type: this.selectedType } },
+      panelClass: 'custom-dialog'
     });
 
     dialogRef.afterClosed().subscribe(async (result) => {
       if (result?.success) {
         await this.loadCategories();
-
-        // Auto-select the newly created category
-        try {
-          const categories = await this.dexieService.getCategoriesByType(selectedType);
-          const newCategory = categories[categories.length - 1];
-          if (newCategory) {
-            this.transactionForm.patchValue({ category: newCategory.name });
-            this.showSuccess(`Category "${newCategory.name}" created and selected!`);
-          }
-        } catch (error) {
-          console.error('Error selecting new category:', error);
-        }
+        await this.selectNewlyCreatedCategory();
       }
     });
   }
 
-  selectType(type: 'income' | 'expense') {
-    this.selectedType = type;
-    this.transactionForm.patchValue({ type });
+  private async selectNewlyCreatedCategory(): Promise<void> {
+    try {
+      const categories = await this.dexieService.getCategoriesByType(this.selectedType);
+      const newCategory = categories[categories.length - 1];
+
+      if (newCategory) {
+        this.transactionForm.patchValue({ category: newCategory.name });
+        this.showNotification(`Category "${newCategory.name}" created and selected!`, 'success');
+      }
+    } catch (error) {
+      console.error('Error selecting new category:', error);
+    }
   }
 
-  // Helper methods for form validation
-  markAllFieldsAsTouched() {
+  private resetFormWithDefaults(previousValues: any): void {
+    this.transactionForm.reset({
+      date: new Date(),
+      type: previousValues.type,
+      category: previousValues.category,
+      amount: null,
+      description: ''
+    });
+  }
+
+  private markAllFieldsAsTouched(): void {
     Object.keys(this.transactionForm.controls).forEach(key => {
       this.transactionForm.get(key)?.markAsTouched();
     });
   }
 
-  showValidationErrors() {
-    const errors: string[] = [];
+  private showValidationErrors(): void {
+    const errors = this.getFormErrors();
+    const errorMessages = Object.values(errors).flat();
 
-    if (this.transactionForm.get('amount')?.errors) {
-      const amountErrors = this.transactionForm.get('amount')?.errors;
-      if (amountErrors?.['required']) errors.push('Amount is required');
-      if (amountErrors?.['min']) errors.push('Amount must be greater than 0');
-      if (amountErrors?.['unreasonableAmount']) errors.push('Amount seems too large. Please verify.');
-    }
-
-    if (this.transactionForm.get('category')?.errors) {
-      errors.push('Please select a category');
-    }
-
-    if (this.transactionForm.get('date')?.errors) {
-      const dateErrors = this.transactionForm.get('date')?.errors;
-      if (dateErrors?.['futureDate']) errors.push('Date cannot be more than 7 days in the future');
-    }
-
-    if (this.transactionForm.get('description')?.errors) {
-      const descErrors = this.transactionForm.get('description')?.errors;
-      if (descErrors?.['maxlength']) errors.push('Description is too long (max 200 characters)');
-      if (descErrors?.['whitespace']) errors.push('Description cannot be empty if provided');
-    }
-
-    if (errors.length > 0) {
-      this.showError('Please fix the following:\n' + errors.join('\n'));
+    if (errorMessages.length > 0) {
+      this.showNotification('Please fix the following:\n' + errorMessages.join('\n'), 'error');
     }
   }
 
-  // Utility methods for user feedback
-  showSuccess(message: string) {
+  private getFormErrors(): FormErrors {
+    const errors: FormErrors = {};
+
+    Object.keys(this.transactionForm.controls).forEach(key => {
+      const controlErrors = this.transactionForm.get(key)?.errors;
+      if (controlErrors) {
+        errors[key] = this.mapControlErrors(key, controlErrors);
+      }
+    });
+
+    return errors;
+  }
+
+  private mapControlErrors(fieldName: string, controlErrors: any): string[] {
+    const errorMessages: string[] = [];
+
+    switch (fieldName) {
+      case 'amount':
+        if (controlErrors.required) errorMessages.push('Amount is required');
+        if (controlErrors.min) errorMessages.push('Amount must be greater than ₹0.01');
+        if (controlErrors.unreasonableAmount) errorMessages.push('Amount seems too large');
+        break;
+      case 'category':
+        if (controlErrors.required) errorMessages.push('Please select a category');
+        break;
+      case 'date':
+        if (controlErrors.futureDate) errorMessages.push('Date cannot be more than 7 days in the future');
+        break;
+      case 'description':
+        if (controlErrors.maxlength) errorMessages.push('Description is too long (max 200 characters)');
+        if (controlErrors.whitespace) errorMessages.push('Description cannot be empty if provided');
+        break;
+    }
+
+    return errorMessages;
+  }
+
+  private showNotification(message: string, type: 'success' | 'error' | 'warning' | 'info'): void {
     this.snackBar.open(message, 'Close', {
-      duration: 3000,
-      panelClass: ['success-snackbar'],
-      horizontalPosition: 'right',
-      verticalPosition: 'bottom'
+      duration: type === 'error' ? 5000 : 3000,
+      panelClass: [`${type}-snackbar`],
+      horizontalPosition: type === 'error' ? 'center' : 'right',
+      verticalPosition: type === 'error' ? 'top' : 'bottom'
     });
   }
 
-  showError(message: string) {
-    this.snackBar.open(message, 'Close', {
-      duration: 5000,
-      panelClass: ['error-snackbar'],
-      horizontalPosition: 'center',
-      verticalPosition: 'top'
-    });
+  // Getters
+  get isFormValid(): boolean {
+    return this.transactionForm.valid;
   }
 
-  showWarning(message: string) {
-    this.snackBar.open(message, 'Got it', {
-      duration: 4000,
-      panelClass: ['warning-snackbar'],
-      horizontalPosition: 'center',
-      verticalPosition: 'bottom'
-    });
+  get canSubmit(): boolean {
+    return this.isFormValid && !this.isSubmitting && !this.isLoadingCategories;
   }
-
-  showInfo(message: string) {
-    this.snackBar.open(message, 'OK', {
-      duration: 3000,
-      panelClass: ['info-snackbar'],
-      horizontalPosition: 'center',
-      verticalPosition: 'bottom'
-    });
-  }
-
-  // Getter methods for template
-  get isFormValid() { return this.transactionForm.valid; }
-  get canSubmit() { return this.isFormValid && !this.isSubmitting; }
 }

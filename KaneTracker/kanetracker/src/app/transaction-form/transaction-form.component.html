@@ -1,93 +1,187 @@
-<div class="form-container">
-  <h1>Log Transaction</h1>
+<div class="form-container bg-pattern">
+  <mat-card class="form-card">
+    <mat-card-header class="form-header">
+      <mat-card-title>
+        <mat-icon class="title-icon">account_balance_wallet</mat-icon>
+        Log Transaction
+      </mat-card-title>
+      <mat-card-subtitle>Track your income and expenses</mat-card-subtitle>
+    </mat-card-header>
 
-  <form [formGroup]="transactionForm" (ngSubmit)="onSubmit()" class="transaction-form">
+    <mat-card-content>
+      <form [formGroup]="transactionForm" (ngSubmit)="onSubmit()" class="transaction-form">
+        
+        <!-- Type Toggle (moved to top for better UX) -->
+        <div class="type-toggle-container">
+          <label class="form-section-label">Transaction Type</label>
+          <mat-button-toggle-group 
+            formControlName="type" 
+            class="type-toggle" 
+            [class.income-selected]="selectedType === 'income'"
+            [class.expense-selected]="selectedType === 'expense'">
+            <mat-button-toggle value="income" class="income-toggle">
+              <mat-icon>trending_up</mat-icon>
+              Income
+            </mat-button-toggle>
+            <mat-button-toggle value="expense" class="expense-toggle">
+              <mat-icon>trending_down</mat-icon>
+              Expense
+            </mat-button-toggle>
+          </mat-button-toggle-group>
+        </div>
 
-    <!-- Amount with enhanced validation -->
-    <mat-form-field appearance="outline" class="full-width">
-      <mat-label>Amount (₹)</mat-label>
-      <input matInput type="number" formControlName="amount" placeholder="0.00" min="0.01" max="10000000" step="0.01">
-      <mat-hint>Maximum amount: ₹1,00,00,000</mat-hint>
-      <mat-error *ngIf="transactionForm.get('amount')?.hasError('required')">
-        Amount is required
-      </mat-error>
-      <mat-error *ngIf="transactionForm.get('amount')?.hasError('min')">
-        Amount must be greater than 0
-      </mat-error>
-      <mat-error *ngIf="transactionForm.get('amount')?.hasError('max')">
-        Amount cannot exceed ₹1,00,00,000
-      </mat-error>
-      <mat-error *ngIf="transactionForm.get('amount')?.hasError('unreasonableAmount')">
-        This amount seems very large. Please double-check.
-      </mat-error>
-    </mat-form-field>
+        <!-- Amount with enhanced styling -->
+        <mat-form-field appearance="outline" class="full-width amount-field">
+          <mat-label>Amount</mat-label>
+          <span matPrefix class="currency-prefix">₹ </span>
+          <input 
+            matInput 
+            type="number" 
+            formControlName="amount" 
+            placeholder="0.00" 
+            min="0.01" 
+            max="10000000" 
+            step="0.01"
+            class="amount-input">
+          <mat-hint class="amount-hint">
+            <span class="hint-text">Maximum: ₹1,00,00,000</span>
+            <span *ngIf="transactionForm.get('amount')?.value > 100000" class="large-amount-warning">
+              <mat-icon>warning</mat-icon> Large amount
+            </span>
+          </mat-hint>
+          <mat-error *ngIf="transactionForm.get('amount')?.hasError('required')">
+            Amount is required
+          </mat-error>
+          <mat-error *ngIf="transactionForm.get('amount')?.hasError('min')">
+            Amount must be greater than ₹0.01
+          </mat-error>
+          <mat-error *ngIf="transactionForm.get('amount')?.hasError('max')">
+            Amount cannot exceed ₹1,00,00,000
+          </mat-error>
+          <mat-error *ngIf="transactionForm.get('amount')?.hasError('unreasonableAmount')">
+            This amount seems very large. Please verify.
+          </mat-error>
+        </mat-form-field>
 
-    <!-- Type Toggle -->
-    <mat-button-toggle-group formControlName="type" class="full-width">
-      <mat-button-toggle value="income">Income</mat-button-toggle>
-      <mat-button-toggle value="expense">Expense</mat-button-toggle>
-    </mat-button-toggle-group>
+        <!-- Category with loading state -->
+        <mat-form-field appearance="outline" class="full-width category-field">
+          <mat-label>
+            <mat-icon class="field-icon">category</mat-icon>
+            Category
+          </mat-label>
+          <mat-select formControlName="category" [disabled]="isLoadingCategories">
+            <mat-option *ngIf="isLoadingCategories" disabled>
+              <mat-spinner diameter="16"></mat-spinner> Loading categories...
+            </mat-option>
+            <mat-option *ngFor="let cat of categories" [value]="cat.name" class="category-option">
+              <div class="category-option-content">
+                <span class="color-dot" [style.background]="cat.color"></span>
+                <span class="category-name">{{ cat.name }}</span>
+              </div>
+            </mat-option>
+            <mat-divider *ngIf="categories.length > 0"></mat-divider>
+            <mat-option (click)="addCategory()" class="add-category-option">
+              <div class="add-category-content">
+                <mat-icon>add_circle</mat-icon>
+                <span>Create New Category</span>
+              </div>
+            </mat-option>
+          </mat-select>
+          <mat-error *ngIf="transactionForm.get('category')?.hasError('required')">
+            Please select a category
+          </mat-error>
+          <mat-hint *ngIf="categories.length === 0 && !isLoadingCategories" class="empty-categories-hint">
+            <mat-icon>info</mat-icon>
+            No {{ selectedType }} categories found. Create one to get started!
+          </mat-hint>
+        </mat-form-field>
 
-    <!-- Category - REMOVED [disabled] attribute -->
-    <mat-form-field appearance="outline" class="full-width">
-      <mat-label>Category</mat-label>
-      <mat-select formControlName="category">
-        <mat-option *ngFor="let cat of categories" [value]="cat.name">
-          <span class="color-dot" [style.background]="cat.color"></span> {{ cat.name }}
-        </mat-option>
-        <mat-divider *ngIf="categories.length > 0"></mat-divider>
-        <mat-option (click)="addCategory()" class="add-option">
-          <mat-icon>add</mat-icon> Add New Category
-        </mat-option>
-      </mat-select>
-      <mat-error *ngIf="transactionForm.get('category')?.hasError('required')">
-        Please select a category
-      </mat-error>
-      <mat-hint *ngIf="categories.length === 0" class="empty-hint">
-        No categories available. Create one first!
-      </mat-hint>
-    </mat-form-field>
+        <!-- Date with enhanced styling -->
+        <mat-form-field appearance="outline" class="full-width date-field">
+          <mat-label>
+            <mat-icon class="field-icon">date_range</mat-icon>
+            Date
+          </mat-label>
+          <input matInput [matDatepicker]="picker" formControlName="date">
+          <mat-datepicker-toggle matSuffix [for]="picker">
+            <mat-icon matDatepickerToggleIcon>calendar_today</mat-icon>
+          </mat-datepicker-toggle>
+          <mat-datepicker #picker></mat-datepicker>
+          <mat-hint>Future dates are limited to 7 days ahead</mat-hint>
+          <mat-error *ngIf="transactionForm.get('date')?.hasError('required')">
+            Date is required
+          </mat-error>
+          <mat-error *ngIf="transactionForm.get('date')?.hasError('futureDate')">
+            Date cannot be more than 7 days in the future
+          </mat-error>
+        </mat-form-field>
 
-    <!-- Date with validation -->
-    <mat-form-field appearance="outline" class="full-width">
-      <mat-label>Date</mat-label>
-      <input matInput [matDatepicker]="picker" formControlName="date">
-      <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
-      <mat-datepicker #picker></mat-datepicker>
-      <mat-hint>Dates more than 7 days in the future are not allowed</mat-hint>
-      <mat-error *ngIf="transactionForm.get('date')?.hasError('required')">
-        Date is required
-      </mat-error>
-      <mat-error *ngIf="transactionForm.get('date')?.hasError('futureDate')">
-        Date cannot be more than 7 days in the future
-      </mat-error>
-    </mat-form-field>
+        <!-- Description with character counter -->
+        <mat-form-field appearance="outline" class="full-width description-field">
+          <mat-label>
+            <mat-icon class="field-icon">description</mat-icon>
+            Description (Optional)
+          </mat-label>
+          <textarea 
+            matInput 
+            formControlName="description" 
+            maxlength="200" 
+            rows="3"
+            placeholder="Add a note about this transaction..."
+            class="description-input">
+          </textarea>
+          <mat-hint align="end" class="char-counter">
+            <span [class.char-warning]="(transactionForm.get('description')?.value?.length || 0) > 150">
+              {{ transactionForm.get('description')?.value?.length || 0 }}/200
+            </span>
+          </mat-hint>
+          <mat-error *ngIf="transactionForm.get('description')?.hasError('maxlength')">
+            Description is too long (maximum 200 characters)
+          </mat-error>
+          <mat-error *ngIf="transactionForm.get('description')?.hasError('whitespace')">
+            Description cannot be just spaces
+          </mat-error>
+        </mat-form-field>
 
-    <!-- Description with character count -->
-    <mat-form-field appearance="outline" class="full-width">
-      <mat-label>Description (Optional)</mat-label>
-      <textarea matInput formControlName="description" maxlength="200" rows="3"
-        placeholder="Add a note about this transaction..."></textarea>
-      <mat-hint align="end">{{transactionForm.get('description')?.value?.length || 0}}/200</mat-hint>
-      <mat-error *ngIf="transactionForm.get('description')?.hasError('maxlength')">
-        Description is too long (maximum 200 characters)
-      </mat-error>
-      <mat-error *ngIf="transactionForm.get('description')?.hasError('whitespace')">
-        Description cannot be just spaces
-      </mat-error>
-    </mat-form-field>
+        <!-- Submit button with enhanced styling -->
+        <div class="submit-container">
+          <button 
+            mat-raised-button 
+            type="submit" 
+            class="submit-btn"
+            [class.submitting]="isSubmitting"
+            [disabled]="!canSubmit">
+            <div class="btn-content">
+              <mat-icon *ngIf="isSubmitting" class="spin-animation">refresh</mat-icon>
+              <mat-icon *ngIf="!isSubmitting">save</mat-icon>
+              <span>{{ isSubmitting ? 'Saving Transaction...' : 'Save Transaction' }}</span>
+            </div>
+          </button>
+          
+          <!-- Form validation status -->
+          <div *ngIf="transactionForm.invalid && transactionForm.touched" class="validation-status">
+            <mat-icon>error_outline</mat-icon>
+            <span>Please fix the highlighted errors above</span>
+          </div>
+        </div>
+      </form>
+    </mat-card-content>
+  </mat-card>
 
-    <!-- Submit button - REMOVED [disabled] attribute, using canSubmit getter instead -->
-    <button mat-raised-button color="primary" class="full-width submit-btn" type="submit" [disabled]="!canSubmit">
-      <mat-icon *ngIf="isSubmitting" class="spinning">refresh</mat-icon>
-      <span *ngIf="!isSubmitting">Save Transaction</span>
-      <span *ngIf="isSubmitting">Saving...</span>
-    </button>
-
-    <!-- Form status indicator -->
-    <div *ngIf="transactionForm.invalid && transactionForm.touched" class="form-status error">
-      <mat-icon>error</mat-icon>
-      Please fix the errors above before submitting.
-    </div>
-  </form>
+  <!-- Quick tips card -->
+  <mat-card class="tips-card" *ngIf="!isSubmitting">
+    <mat-card-content>
+      <div class="tips-content">
+        <mat-icon>lightbulb</mat-icon>
+        <div class="tips-text">
+          <h4>Quick Tips</h4>
+          <ul>
+            <li>Use precise amounts for better tracking</li>
+            <li>Create categories that match your spending habits</li>
+            <li>Add descriptions for unusual transactions</li>
+          </ul>
+        </div>
+      </div>
+    </mat-card-content>
+  </mat-card>
 </div>

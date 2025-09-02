@@ -76,4 +76,21 @@ export class TransactionsComponent implements OnInit {
       await this.loadData();
     }
   }
+
+  getTotalIncome(): number {
+    return this.transactions
+      .filter(tx => tx.type === 'income')
+      .reduce((sum, tx) => sum + tx.amount, 0);
+  }
+
+  getTotalExpenses(): number {
+    return this.transactions
+      .filter(tx => tx.type === 'expense')
+      .reduce((sum, tx) => sum + tx.amount, 0);
+  }
+
+  getNetBalance(): number {
+    return this.getTotalIncome() - this.getTotalExpenses();
+  }
+
 }

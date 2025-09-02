@@ -1,101 +1,169 @@
 <div class="dashboard-container">
-    <h1 class="dashboard-title">Financial Overview</h1>
-
-    <!-- Balance Cards -->
-    <div class="balance-section">
-        <div class="balance-card total" [class.positive]="totalBalance >= 0" [class.negative]="totalBalance < 0">
-            <div class="balance-header">
-                <mat-icon>account_balance_wallet</mat-icon>
-                <h3>Total Balance</h3>
-            </div>
-            <p class="balance-amount">₹{{ totalBalance | number:'1.2-2' }}</p>
+    <!-- Enhanced Header -->
+    <div class="dashboard-header">
+        <div class="header-content">
+            <h1 class="dashboard-title">
+                <mat-icon class="title-icon">dashboard</mat-icon>
+                Spendify
+            </h1>
         </div>
+    </div>
 
+    <!-- Enhanced Balance Card with integrated toggle -->
+    <div class="hero-section">
+        <div class="balance-card glass" [class.positive]="totalBalance >= 0" [class.negative]="totalBalance < 0">
+            <button mat-icon-button class="period-toggle-btn-card" (click)="togglePeriodSelector()"
+                aria-label="Toggle Period Selector">
+                <mat-icon>{{ showPeriodSelector ? 'visibility_off' : 'visibility' }}</mat-icon>
+
+            </button>
+            <!-- Use [class.show] binding to toggle visibility -->
+            <div class="period-selector" [class.show]="showPeriodSelector">
+                <div class="selector-header">
+                    <mat-icon>schedule</mat-icon>
+                    <span>Time Period</span>
+                </div>
+                <div class="period-buttons">
+                    <button *ngFor="let period of availablePeriods" mat-stroked-button
+                        [class.active]="selectedPeriod === period.value" (click)="onPeriodChange(period.value)"
+                        class="period-btn">
+                        <mat-icon>{{ period.icon }}</mat-icon>
+                        <span>{{ period.label }}</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="balance-background-pattern"></div>
+            <div class="balance-content">
+                <div class="balance-header">
+                    <div class="balance-icon-wrapper">
+                        <mat-icon class="balance-icon">account_balance_wallet</mat-icon>
+                    </div>
+                    <div class="balance-text">
+                        <h3>{{ currentPeriodLabel }} Balance</h3>
+                        <div class="trend-indicator" *ngIf="trendComparison">
+                            <mat-icon class="trend-icon">trending_up</mat-icon>
+                            <span>{{ trendComparison }}</span>
+                        </div>
+                    </div>
+                </div>
+                <p class="balance-amount">₹{{ totalBalance | number:'1.2-2' }}</p>
+
+                <!-- Savings Rate Indicator -->
+                <div class="savings-indicator" *ngIf="totalIncome > 0">
+                    <div class="savings-bar">
+                        <div class="savings-fill" [style.width.%]="getSavingsRate()"></div>
+                    </div>
+                    <span class="savings-text">{{ getSavingsRate() | number:'1.0-0' }}% Savings Rate</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Enhanced Stats Grid with Micro-animations -->
+    <div class="stats-section">
         <div class="stats-grid">
-            <div class="stat-card income">
-                <mat-icon>trending_up</mat-icon>
-                <div class="stat-info">
-                    <span class="stat-label">Total Income</span>
-                    <span class="stat-value">₹{{ totalIncome | number:'1.2-2' }}</span>
+            <div class="stat-card income glass-card" [attr.data-value]="totalIncome">
+                <div class="stat-background"></div>
+                <div class="stat-content">
+                    <div class="stat-icon-wrapper income">
+                        <mat-icon class="stat-icon">trending_up</mat-icon>
+                    </div>
+                    <div class="stat-info">
+                        <span class="stat-label">Total Income</span>
+                        <span class="stat-value">₹{{ totalIncome | number:'1.2-2' }}</span>
+                    </div>
                 </div>
+                <div class="stat-pulse income-pulse"></div>
             </div>
 
-            <div class="stat-card expense">
-                <mat-icon>trending_down</mat-icon>
-                <div class="stat-info">
-                    <span class="stat-label">Total Expenses</span>
-                    <span class="stat-value">₹{{ totalExpenses | number:'1.2-2' }}</span>
+            <div class="stat-card expense glass-card" [attr.data-value]="totalExpenses">
+                <div class="stat-background"></div>
+                <div class="stat-content">
+                    <div class="stat-icon-wrapper expense">
+                        <mat-icon class="stat-icon">trending_down</mat-icon>
+                    </div>
+                    <div class="stat-info">
+                        <span class="stat-label">Total Expenses</span>
+                        <span class="stat-value">₹{{ totalExpenses | number:'1.2-2' }}</span>
+                    </div>
                 </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Monthly Stats -->
-    <div class="monthly-section">
-        <h2>{{ monthlyStats.currentMonth }} Overview</h2>
-        <div class="monthly-cards">
-            <div class="monthly-card">
-                <div class="monthly-header">
-                    <mat-icon class="income-icon">add_circle</mat-icon>
-                    <span>Income</span>
-                </div>
-                <p class="monthly-amount income">₹{{ monthlyStats.income | number:'1.2-2' }}</p>
-            </div>
-
-            <div class="monthly-card">
-                <div class="monthly-header">
-                    <mat-icon class="expense-icon">remove_circle</mat-icon>
-                    <span>Expenses</span>
-                </div>
-                <p class="monthly-amount expense">₹{{ monthlyStats.expenses | number:'1.2-2' }}</p>
-            </div>
-
-            <div class="monthly-card">
-                <div class="monthly-header">
-                    <mat-icon>savings</mat-icon>
-                    <span>Net</span>
-                </div>
-                <p class="monthly-amount" [class.positive]="(monthlyStats.income - monthlyStats.expenses) >= 0"
-                    [class.negative]="(monthlyStats.income - monthlyStats.expenses) < 0">
-                    ₹{{ (monthlyStats.income - monthlyStats.expenses) | number:'1.2-2' }}
-                </p>
+                <div class="stat-pulse expense-pulse"></div>
             </div>
         </div>
     </div>
 
-    <!-- Top Categories -->
+    <!-- Enhanced Categories Section with Progress Bars -->
     <div class="categories-section" *ngIf="topCategories.length > 0">
-        <div class="section-header">
-            <h2>Top Spending Categories</h2>
-            <button mat-button color="primary" routerLink="/categories">View All</button>
+        <div class="section-header glass-header">
+            <div class="header-left">
+                <mat-icon class="section-icon">donut_large</mat-icon>
+                <h2>Top Spending Categories</h2>
+            </div>
+            <button mat-icon-button routerLink="/categories" class="view-all-btn">
+                <mat-icon>arrow_forward</mat-icon>
+            </button>
         </div>
-        <div class="categories-list">
-            <div *ngFor="let category of topCategories" class="category-item"
-                [style.background]="hexToRgba(category.color)">
-                <div class="category-info">
-                    <div class="category-dot" [style.background]="category.color"></div>
-                    <span class="category-name">{{ category.name }}</span>
+
+        <div class="categories-grid">
+            <div *ngFor="let category of topCategories; let i = index" class="category-card glass-card"
+                [style.animation-delay.ms]="i * 100">
+                <div class="category-header">
+                    <div class="category-info">
+                        <div class="category-dot-wrapper">
+                            <div class="category-dot" [style.background]="category.color"></div>
+                            <div class="category-glow" [style.background]="category.color"></div>
+                        </div>
+                        <span class="category-name">{{ category.name }}</span>
+                    </div>
+                    <span class="category-amount">₹{{ category.amount | number:'1.0-0' }}</span>
                 </div>
-                <span class="category-amount">₹{{ category.amount | number:'1.2-2' }}</span>
+
+                <div class="category-progress">
+                    <div class="progress-track">
+                        <div class="progress-fill" [style.width.%]="category.percentage"
+                            [style.background]="category.color"></div>
+                    </div>
+                    <span class="progress-text">{{ category.percentage | number:'1.0-0' }}%</span>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Recent Transactions -->
+    <!-- Enhanced Recent Transactions with Smooth Animations -->
     <div class="recent-section" *ngIf="recentTransactions.length > 0">
-        <div class="section-header">
-            <h2>Recent Transactions</h2>
-            <button mat-button color="primary" routerLink="/transactions">View All</button>
+        <div class="section-header glass-header">
+            <div class="header-left">
+                <mat-icon class="section-icon">history</mat-icon>
+                <h2>Recent Activity</h2>
+            </div>
+            <button mat-icon-button routerLink="/transactions" class="view-all-btn">
+                <mat-icon>arrow_forward</mat-icon>
+            </button>
         </div>
-        <div class="recent-list">
-            <div *ngFor="let tx of recentTransactions" class="recent-item">
-                <div class="recent-info">
-                    <span class="recent-category">{{ tx.category }}</span>
-                    <span class="recent-desc">{{ tx.description || 'No description' }}</span>
+
+        <div class="recent-list glass-card">
+            <div *ngFor="let tx of recentTransactions; let i = index" class="recent-item"
+                [style.animation-delay.ms]="i * 50">
+                <div class="recent-left">
+                    <div class="transaction-icon-wrapper" [class]="tx.type">
+                        <mat-icon class="transaction-icon">
+                            {{ tx.type === 'income' ? 'add_circle' : 'remove_circle' }}
+                        </mat-icon>
+                    </div>
+                    <div class="recent-info">
+                        <span class="recent-category">{{ tx.category }}</span>
+                        <span class="recent-desc">{{ tx.description || 'No description' }}</span>
+                        <span class="recent-date">{{ tx.date | date:'MMM dd' }}</span>
+                    </div>
                 </div>
-                <div class="recent-amount" [ngClass]="tx.type">
-                    {{ tx.type === 'income' ? '+' : '-' }}₹{{ tx.amount | number:'1.2-2' }}
+                <div class="recent-amount" [class]="tx.type">
+                    <span class="amount-value">{{ tx.type === 'income' ? '+' : '-' }}₹{{ tx.amount | number:'1.2-2'
+                        }}</span>
+                    <div class="amount-indicator" [style.background]="tx.type === 'income' ? '#4CAF50' : '#f44336'">
+                    </div>
                 </div>
             </div>
         </div>
     </div>
+</div>

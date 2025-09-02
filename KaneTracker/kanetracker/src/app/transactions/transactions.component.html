@@ -1,46 +1,123 @@
 <div class="transactions-container">
-  <!-- Header with Search Button -->
-  <div class="transactions-header">
-    <h1 class="page-title">Transactions</h1>
-    <button mat-icon-button (click)="navigateToSearch()" matTooltip="Search all transactions">
-      <mat-icon>search</mat-icon>
-    </button>
+  <!-- Enhanced Header Section -->
+  <div class="page-header glass">
+    <div class="header-content">
+      <div class="title-section">
+        <mat-icon class="page-icon">receipt_long</mat-icon>
+        <div class="title-text">
+          <h1 class="page-title">All Transactions</h1>
+          <p class="page-subtitle">Your complete financial history</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button mat-fab color="primary" (click)="navigateToSearch()" matTooltip="Search transactions"
+          class="search-fab">
+          <mat-icon>search</mat-icon>
+        </button>
+      </div>
+    </div>
   </div>
 
-  <div class="transactions-list" *ngIf="transactions.length; else noData">
-    <button *ngFor="let tx of transactions" class="transaction-card clickable"
-      [style.background]="hexToRgba(getCategoryColor(tx.category))" (click)="openTransactionDetails(tx)" type="button"
-      [attr.aria-label]="'Transaction: ' + tx.category + ' ' + (tx.type === 'income' ? '+' : '-') + tx.amount">
+  <!-- Quick Stats Overview
+  <div class="stats-overview" *ngIf="transactions.length">
+    <div class="stat-item glass-card">
+      <mat-icon class="stat-icon income">trending_up</mat-icon>
+      <div class="stat-info">
+        <span class="stat-value income">+₹{{ getTotalIncome() | number:'1.2-2' }}</span>
+        <span class="stat-label">Total Income</span>
+      </div>
+    </div>
+    <div class="stat-item glass-card">
+      <mat-icon class="stat-icon expense">trending_down</mat-icon>
+      <div class="stat-info">
+        <span class="stat-value expense">-₹{{ getTotalExpenses() | number:'1.2-2' }}</span>
+        <span class="stat-label">Total Expenses</span>
+      </div>
+    </div>
+    <div class="stat-item glass-card">
+      <mat-icon class="stat-icon balance">account_balance</mat-icon>
+      <div class="stat-info">
+        <span class="stat-value" [class.income]="getNetBalance() >= 0" [class.expense]="getNetBalance() < 0">
+          {{ getNetBalance() >= 0 ? '+' : '' }}₹{{ getNetBalance() | number:'1.2-2' }}
+        </span>
+        <span class="stat-label">Net Balance</span>
+      </div>
+    </div>
+  </div> -->
 
-      <div class="transaction-header">
-        <div class="category-info">
-          <div class="category-dot" [style.background]="getCategoryColor(tx.category)">
+  <!-- Enhanced Transactions List -->
+  <div class="transactions-section" *ngIf="transactions.length; else noData">
+    <div class="section-header glass-header">
+      <div class="header-left">
+        <mat-icon class="section-icon">history</mat-icon>
+        <h2>Activity</h2>
+      </div>
+      <span class="transaction-count">{{ transactions.length }} transactions</span>
+    </div>
+
+    <div class="transactions-grid">
+      <div *ngFor="let tx of transactions; let i = index" class="transaction-item glass-card"
+        [style.background]="hexToRgba(getCategoryColor(tx.category), 0.05)" [style.animation-delay.ms]="i * 50"
+        (click)="openTransactionDetails(tx)">
+
+        <!-- Transaction Icon -->
+        <div class="transaction-icon-wrapper" [class]="tx.type">
+          <mat-icon class="transaction-icon">
+            {{ tx.type === 'income' ? 'add_circle' : 'remove_circle' }}
+          </mat-icon>
+        </div>
+
+        <!-- Transaction Content -->
+        <div class="transaction-content">
+          <div class="transaction-main">
+            <div class="category-section">
+              <div class="category-dot" [style.background]="getCategoryColor(tx.category)"></div>
+              <span class="category-name">{{ tx.category }}</span>
+            </div>
+            <div class="transaction-amount" [class]="tx.type">
+              <span class="amount-text">
+                {{ tx.type === 'income' ? '+' : '-' }}₹{{ tx.amount | number:'1.2-2' }}
+              </span>
+            </div>
           </div>
-          <span class="category-name">{{ tx.category }}</span>
-        </div>
-        <div class="transaction-amount" [ngClass]="tx.type">
-          <span class="currency">{{ tx.type === 'income' ? '+' : '-' }}₹{{ tx.amount | number:'1.2-2' }}</span>
-          <mat-icon class="type-icon">{{ tx.type === 'income' ? 'trending_up' : 'trending_down' }}</mat-icon>
-        </div>
-      </div>
 
-      <div class="transaction-details">
-        <p class="description">{{ tx.description || 'No description' }}</p>
-        <span class="date">{{ tx.date | date:'MMM dd, yyyy' }}</span>
+          <div class="transaction-details">
+            <p class="description">{{ tx.description || 'No description' }}</p>
+            <div class="transaction-meta">
+              <span class="date">{{ tx.date | date:'MMM dd, yyyy' }}</span>
+              <mat-icon class="expand-icon">chevron_right</mat-icon>
+            </div>
+          </div>
+        </div>
       </div>
-    </button>
+    </div>
   </div>
 
+  <!-- Enhanced Empty State -->
   <ng-template #noData>
-    <div class="no-data">
-      <mat-icon class="no-data-icon">receipt_long</mat-icon>
-      <p>No transactions yet</p>
-      <span>Your transactions will appear here once you start logging them.</span>
-      <!-- Add search suggestion for empty state -->
-      <button mat-button routerLink="/search" class="search-suggestion">
-        <mat-icon>search</mat-icon>
-        Search existing transactions
-      </button>
+    <div class="empty-state glass-card">
+      <div class="empty-illustration">
+        <mat-icon class="empty-icon">receipt_long</mat-icon>
+        <div class="empty-rings">
+          <div class="ring ring-1"></div>
+          <div class="ring ring-2"></div>
+          <div class="ring ring-3"></div>
+        </div>
+      </div>
+      <div class="empty-content">
+        <h3>No transactions yet</h3>
+        <p>Your financial journey starts here. Add your first transaction to begin tracking your money.</p>
+        <div class="empty-actions">
+          <button mat-raised-button color="primary" routerLink="/add-transaction">
+            <mat-icon>add</mat-icon>
+            Add Transaction
+          </button>
+          <button mat-stroked-button (click)="navigateToSearch()">
+            <mat-icon>search</mat-icon>
+            Search Transactions
+          </button>
+        </div>
+      </div>
     </div>
   </ng-template>
 </div>

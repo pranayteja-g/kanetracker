@@ -11,11 +11,9 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { Router } from '@angular/router';
 import { Subject } from 'rxjs';
-import { debounceTime, distinctUntilChanged, takeUntil, switchMap } from 'rxjs/operators';
-
+import { debounceTime, distinctUntilChanged, takeUntil } from 'rxjs/operators';
 import { DexieService } from '../services/dexie.service';
 import { Transaction } from '../models/transaction.interface';
 import { Category } from '../models/category.interface';
@@ -36,7 +34,6 @@ import { Category } from '../models/category.interface';
     MatDatepickerModule,
     MatNativeDateModule,
     MatProgressSpinnerModule,
-    MatProgressBarModule,
   ],
   templateUrl: './search.component.html',
   styleUrls: ['./search.component.css']
@@ -48,19 +45,22 @@ export class SearchComponent implements OnInit, OnDestroy {
   isLoading = false;
   private destroy$ = new Subject<void>();
   showAdvanced = false;
+  totalIncome = 0;
+  totalExpenses = 0;
+  netAmount = 0;
 
   quickFilters = [
-    { label: 'Today', days: 0 },
-    { label: 'Last 7 Days', days: 7 },
-    { label: 'Last 30 Days', days: 30 },
-    { label: 'Last 3 Months', days: 90 },
-    { label: 'This Year', days: 365 }
+    { label: 'Today', days: 0, icon: 'today' },
+    { label: 'Last 7 Days', days: 7, icon: 'date_range' },
+    { label: 'Last Month', days: -1, icon: 'calendar_month' },
+    { label: 'Last 3 Months', days: 90, icon: 'event_note' },
+    { label: 'This Year', days: 365, icon: 'calendar_view_year' }
   ];
 
   sortOptions = [
-    { value: 'date', label: 'Date' },
-    { value: 'amount', label: 'Amount' },
-    { value: 'category', label: 'Category' }
+    { value: 'date', label: 'Date', icon: 'schedule' },
+    { value: 'amount', label: 'Amount', icon: 'currency_rupee' },
+    { value: 'category', label: 'Category', icon: 'category' }
   ];
 
   constructor(
@@ -104,35 +104,27 @@ export class SearchComponent implements OnInit, OnDestroy {
   }
 
   setupFormSubscriptions(): void {
-    // Debounced search on text input
     this.searchForm.get('query')?.valueChanges
       .pipe(
         debounceTime(300),
         distinctUntilChanged(),
-        takeUntil(this.destroy$),
-        switchMap(() => this.performSearch())
+        takeUntil(this.destroy$)
       )
-      .subscribe();
+      .subscribe(() => this.performSearch());
 
-    // Instant search on filter changes
     ['category', 'type', 'sortBy', 'sortAsc'].forEach(controlName => {
       this.searchForm.get(controlName)?.valueChanges
-        .pipe(
-          takeUntil(this.destroy$),
-          switchMap(() => this.performSearch())
-        )
-        .subscribe();
+        .pipe(takeUntil(this.destroy$))
+        .subscribe(() => setTimeout(() => this.performSearch(), 0));
     });
 
-    // Date range changes
     ['startDate', 'endDate', 'minAmount', 'maxAmount'].forEach(controlName => {
       this.searchForm.get(controlName)?.valueChanges
         .pipe(
           debounceTime(500),
-          takeUntil(this.destroy$),
-          switchMap(() => this.performSearch())
+          takeUntil(this.destroy$)
         )
-        .subscribe();
+        .subscribe(() => this.performSearch());
     });
   }
 
@@ -146,7 +138,6 @@ export class SearchComponent implements OnInit, OnDestroy {
     try {
       this.isLoading = true;
       const formValue = this.searchForm.value;
-
       const results = await this.dexieService.searchTransactions(
         formValue.query || '',
         formValue.category || '',
@@ -160,9 +151,11 @@ export class SearchComponent implements OnInit, OnDestroy {
       );
 
       this.transactions = results;
+      this.calculateTotals();
     } catch (error) {
       console.error('Error searching transactions:', error);
       this.transactions = [];
+      this.resetTotals();
     } finally {
       this.isLoading = false;
     }
@@ -175,6 +168,11 @@ export class SearchComponent implements OnInit, OnDestroy {
     if (days === 0) {
       startDate.setHours(0, 0, 0, 0);
       endDate.setHours(23, 59, 59, 999);
+    } else if (days === -1) {
+      const now = new Date();
+      startDate.setFullYear(now.getFullYear(), now.getMonth() - 1, 1);
+      endDate.setFullYear(now.getFullYear(), now.getMonth(), 0);
+      endDate.setHours(23, 59, 59, 999);
     } else {
       startDate.setDate(endDate.getDate() - days);
     }
@@ -183,6 +181,33 @@ export class SearchComponent implements OnInit, OnDestroy {
       startDate: startDate,
       endDate: endDate
     });
+  }
+
+  isFilterActive(days: number): boolean {
+    const formValue = this.searchForm.value;
+    if (!formValue.startDate || !formValue.endDate) return false;
+
+    const currentStart = new Date(formValue.startDate);
+    const currentEnd = new Date(formValue.endDate);
+    const now = new Date();
+
+    if (days === 0) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return currentStart.toDateString() === today.toDateString();
+    } else if (days === -1) {
+      const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      return currentStart.toDateString() === lastMonthStart.toDateString();
+    } else {
+      const expectedStart = new Date();
+      expectedStart.setDate(now.getDate() - days);
+      return Math.abs(currentStart.getTime() - expectedStart.getTime()) < 24 * 60 * 60 * 1000;
+    }
+  }
+
+  toggleSortDirection(): void {
+    const currentValue = this.searchForm.get('sortAsc')?.value;
+    this.searchForm.patchValue({ sortAsc: !currentValue });
   }
 
   clearFilters(): void {
@@ -199,12 +224,26 @@ export class SearchComponent implements OnInit, OnDestroy {
     });
   }
 
-  editTransaction(transaction: Transaction): void {
-    this.router.navigate(['/transactions/edit', transaction.id]);
+  private calculateTotals(): void {
+    this.totalIncome = this.transactions
+      .filter(t => t.type === 'income')
+      .reduce((sum, t) => sum + t.amount, 0);
+
+    this.totalExpenses = this.transactions
+      .filter(t => t.type === 'expense')
+      .reduce((sum, t) => sum + t.amount, 0);
+
+    this.netAmount = this.totalIncome - this.totalExpenses;
   }
 
-  getTransactionIcon(type: string): string {
-    return type === 'income' ? 'trending_up' : 'trending_down';
+  private resetTotals(): void {
+    this.totalIncome = 0;
+    this.totalExpenses = 0;
+    this.netAmount = 0;
+  }
+
+  editTransaction(transaction: Transaction): void {
+    this.router.navigate(['/transactions/edit', transaction.id]);
   }
 
   getTransactionClass(type: string): string {

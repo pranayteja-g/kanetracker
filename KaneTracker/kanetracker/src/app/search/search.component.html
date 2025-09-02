@@ -1,167 +1,211 @@
 <div class="search-container">
-  <h1>Search Transactions</h1>
+  <!-- Header -->
+  <div class="page-header glass">
+    <div class="header-content">
+      <mat-icon class="page-icon">search</mat-icon>
+      <div class="title-text">
+        <h1>Search Transactions</h1>
+        <p>Find and filter your financial records</p>
+      </div>
+    </div>
+  </div>
 
   <!-- Search Form -->
-  <mat-card class="search-card">
+  <div class="search-card glass-card">
     <form [formGroup]="searchForm" class="search-form">
-
-      <!-- Text Search -->
-      <mat-form-field appearance="outline" class="full-width">
-        <mat-label>Search descriptions...</mat-label>
-        <input matInput formControlName="query" placeholder="e.g., coffee, groceries, salary">
-        <mat-icon matSuffix>search</mat-icon>
-      </mat-form-field>
+      <!-- Search Input -->
+      <div class="search-input-section">
+        <mat-form-field appearance="outline" class="search-input">
+          <mat-label>Search descriptions...</mat-label>
+          <input matInput formControlName="query" placeholder="e.g., coffee, groceries, salary">
+          <mat-icon matSuffix>search</mat-icon>
+        </mat-form-field>
+      </div>
 
       <!-- Quick Filters -->
-      <div class="quick-filters">
-        <span class="filter-label">Quick Filters:</span>
+      <div class="quick-filters-section">
+        <div class="section-label">
+          <mat-icon>tune</mat-icon>
+          <span>Quick Filters</span>
+        </div>
         <div class="filter-chips">
-          <button *ngFor="let filter of quickFilters" mat-stroked-button class="filter-chip"
-            (click)="setQuickFilter(filter.days)">
+          <button *ngFor="let filter of quickFilters" 
+                  mat-stroked-button 
+                  class="filter-chip"
+                  [class.active]="isFilterActive(filter.days)"
+                  (click)="setQuickFilter(filter.days)">
+            <mat-icon>{{ filter.icon }}</mat-icon>
             {{ filter.label }}
           </button>
         </div>
       </div>
 
       <!-- Advanced Filters Toggle -->
-      <button mat-button type="button" class="filters-toggle" (click)="showAdvanced = !showAdvanced">
-        <mat-icon>{{ showAdvanced ? 'expand_less' : 'tune' }}</mat-icon>
-        {{ showAdvanced ? 'Hide Filters' : 'More Filters' }}
-      </button>
+      <div class="toggle-section">
+        <button mat-stroked-button type="button" class="advanced-toggle" (click)="showAdvanced = !showAdvanced">
+          <mat-icon>{{ showAdvanced ? 'expand_less' : 'tune' }}</mat-icon>
+          {{ showAdvanced ? 'Hide Filters' : 'Advanced Filters' }}
+        </button>
+      </div>
 
-      <!-- Advanced Filters (Collapsible on Mobile) -->
+      <!-- Advanced Filters -->
       <div class="advanced-filters" [class.show]="showAdvanced">
+        <div class="filters-container">
+          <!-- Row 1: Category & Type -->
+          <div class="filter-row">
+            <mat-form-field appearance="outline" class="filter-field">
+              <mat-label>Category</mat-label>
+              <mat-select formControlName="category">
+                <mat-option value="">All Categories</mat-option>
+                <mat-option *ngFor="let cat of categories" [value]="cat.name">
+                  {{ cat.name }}
+                </mat-option>
+              </mat-select>
+              <mat-icon matPrefix>category</mat-icon>
+            </mat-form-field>
 
-        <!-- Category & Type Row -->
-        <div class="filter-row">
-          <mat-form-field appearance="outline">
-            <mat-label>Category</mat-label>
-            <mat-select formControlName="category">
-              <mat-option value="">All Categories</mat-option>
-              <mat-option *ngFor="let cat of categories" [value]="cat.name">
-                <span class="color-dot" [style.background]="cat.color"></span>
-                {{ cat.name }}
-              </mat-option>
-            </mat-select>
-          </mat-form-field>
+            <mat-form-field appearance="outline" class="filter-field">
+              <mat-label>Type</mat-label>
+              <mat-select formControlName="type">
+                <mat-option value="">All Types</mat-option>
+                <mat-option value="income">Income</mat-option>
+                <mat-option value="expense">Expense</mat-option>
+              </mat-select>
+              <mat-icon matPrefix>swap_vert</mat-icon>
+            </mat-form-field>
+          </div>
 
-          <mat-form-field appearance="outline">
-            <mat-label>Type</mat-label>
-            <mat-select formControlName="type">
-              <mat-option value="">All Types</mat-option>
-              <mat-option value="income">Income</mat-option>
-              <mat-option value="expense">Expense</mat-option>
-            </mat-select>
-          </mat-form-field>
-        </div>
+          <!-- Row 2: Date Range -->
+          <div class="filter-row">
+            <mat-form-field appearance="outline" class="filter-field">
+              <mat-label>Start Date</mat-label>
+              <input matInput [matDatepicker]="startPicker" formControlName="startDate">
+              <mat-datepicker-toggle matSuffix [for]="startPicker"></mat-datepicker-toggle>
+              <mat-datepicker #startPicker></mat-datepicker>
+              <mat-icon matPrefix>date_range</mat-icon>
+            </mat-form-field>
 
-        <!-- Date Range Row -->
-        <div class="filter-row">
-          <mat-form-field appearance="outline">
-            <mat-label>Start Date</mat-label>
-            <input matInput [matDatepicker]="startPicker" formControlName="startDate">
-            <mat-datepicker-toggle matSuffix [for]="startPicker"></mat-datepicker-toggle>
-            <mat-datepicker #startPicker></mat-datepicker>
-          </mat-form-field>
+            <mat-form-field appearance="outline" class="filter-field">
+              <mat-label>End Date</mat-label>
+              <input matInput [matDatepicker]="endPicker" formControlName="endDate">
+              <mat-datepicker-toggle matSuffix [for]="endPicker"></mat-datepicker-toggle>
+              <mat-datepicker #endPicker></mat-datepicker>
+              <mat-icon matPrefix>date_range</mat-icon>
+            </mat-form-field>
+          </div>
 
-          <mat-form-field appearance="outline">
-            <mat-label>End Date</mat-label>
-            <input matInput [matDatepicker]="endPicker" formControlName="endDate">
-            <mat-datepicker-toggle matSuffix [for]="endPicker"></mat-datepicker-toggle>
-            <mat-datepicker #endPicker></mat-datepicker>
-          </mat-form-field>
-        </div>
+          <!-- Row 3: Amount Range -->
+          <div class="filter-row">
+            <mat-form-field appearance="outline" class="filter-field">
+              <mat-label>Min Amount</mat-label>
+              <input matInput type="number" formControlName="minAmount" placeholder="0">
+              <span matPrefix>₹&nbsp;</span>
+            </mat-form-field>
 
-        <!-- Amount Range Row -->
-        <div class="filter-row">
-          <mat-form-field appearance="outline">
-            <mat-label>Min Amount</mat-label>
-            <input matInput type="number" formControlName="minAmount" placeholder="0">
-            <span matPrefix>₹&nbsp;</span>
-          </mat-form-field>
+            <mat-form-field appearance="outline" class="filter-field">
+              <mat-label>Max Amount</mat-label>
+              <input matInput type="number" formControlName="maxAmount" placeholder="Any">
+              <span matPrefix>₹&nbsp;</span>
+            </mat-form-field>
+          </div>
 
-          <mat-form-field appearance="outline">
-            <mat-label>Max Amount</mat-label>
-            <input matInput type="number" formControlName="maxAmount" placeholder="Any">
-            <span matPrefix>₹&nbsp;</span>
-          </mat-form-field>
-        </div>
+          <!-- Row 4: Sort Options -->
+          <div class="sort-section">
+            <mat-form-field appearance="outline" class="sort-field">
+              <mat-label>Sort By</mat-label>
+              <mat-select formControlName="sortBy">
+                <mat-option *ngFor="let sort of sortOptions" [value]="sort.value">
+                  {{ sort.label }}
+                </mat-option>
+              </mat-select>
+              <mat-icon matPrefix>sort</mat-icon>
+            </mat-form-field>
 
-        <!-- Sort Options Row -->
-        <div class="filter-row sort-row">
-          <mat-form-field appearance="outline">
-            <mat-label>Sort By</mat-label>
-            <mat-select formControlName="sortBy">
-              <mat-option *ngFor="let sort of sortOptions" [value]="sort.value">
-                {{ sort.label }}
-              </mat-option>
-            </mat-select>
-          </mat-form-field>
+            <button mat-icon-button type="button" class="sort-direction"
+                    [color]="searchForm.get('sortAsc')?.value ? 'primary' : ''"
+                    (click)="toggleSortDirection()">
+              <mat-icon>{{ searchForm.get('sortAsc')?.value ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
+            </button>
+          </div>
 
-          <button mat-icon-button type="button" class="sort-toggle"
-            [color]="searchForm.get('sortAsc')?.value ? 'primary' : ''"
-            (click)="searchForm.patchValue({sortAsc: !searchForm.get('sortAsc')?.value})">
-            <mat-icon>{{ searchForm.get('sortAsc')?.value ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
-          </button>
-        </div>
-
-        <!-- Clear Filters Button -->
-        <div class="filter-actions" *ngIf="hasActiveFilters">
-          <button mat-button color="warn" (click)="clearFilters()">
-            <mat-icon>clear</mat-icon>
-            Clear All Filters
-          </button>
+          <!-- Clear Filters -->
+          <div class="clear-section" *ngIf="hasActiveFilters">
+            <button mat-stroked-button color="warn" (click)="clearFilters()" class="clear-btn">
+              <mat-icon>clear_all</mat-icon>
+              Clear All Filters
+            </button>
+          </div>
         </div>
       </div>
     </form>
-  </mat-card>
+  </div>
 
   <!-- Results Summary -->
-  <div class="results-summary">
-    <div class="result-count">
+  <div class="results-summary glass-header" *ngIf="!isLoading">
+    <div class="result-info">
       <mat-icon>receipt</mat-icon>
       <span>{{ resultCount }} result{{ resultCount !== 1 ? 's' : '' }}</span>
     </div>
-    <mat-progress-bar mode="indeterminate" *ngIf="isLoading"></mat-progress-bar>
+    <div class="amount-info" *ngIf="transactions.length > 0">
+      <div class="amount-chip income" *ngIf="totalIncome > 0">
+        +₹{{ totalIncome | number:'1.2-2' }}
+      </div>
+      <div class="amount-chip expense" *ngIf="totalExpenses > 0">
+        -₹{{ totalExpenses | number:'1.2-2' }}
+      </div>
+      <div class="amount-chip net" [class.positive]="netAmount >= 0" [class.negative]="netAmount < 0">
+        ₹{{ netAmount | number:'1.2-2' }}
+      </div>
+    </div>
   </div>
 
-  <!-- Transaction Results -->
-  <div class="results-container">
-    <div *ngIf="transactions.length === 0 && !isLoading" class="no-results">
-      <mat-icon>search_off</mat-icon>
+  <!-- Loading -->
+  <div class="loading-section glass-card" *ngIf="isLoading">
+    <mat-progress-spinner diameter="40"></mat-progress-spinner>
+    <p>Searching transactions...</p>
+  </div>
+
+  <!-- Results -->
+  <div class="results-section" *ngIf="!isLoading">
+    <!-- No Results -->
+    <div *ngIf="transactions.length === 0" class="no-results glass-card">
+      <mat-icon class="no-results-icon">search_off</mat-icon>
       <h3>No transactions found</h3>
       <p>Try adjusting your search criteria</p>
+      <button mat-stroked-button (click)="clearFilters()" *ngIf="hasActiveFilters">
+        Clear Filters
+      </button>
     </div>
 
-    <!-- Compact Mobile Transaction Cards -->
+    <!-- Transaction List -->
     <div *ngIf="transactions.length > 0" class="transaction-list">
-      <div *ngFor="let transaction of transactions" class="transaction-card compact"
-        [class]="getTransactionClass(transaction.type)" (click)="editTransaction(transaction)"
-        (keydown.enter)="editTransaction(transaction)" tabindex="0" role="button">
+      <div *ngFor="let transaction of transactions" 
+           class="transaction-item glass-card"
+           [class]="getTransactionClass(transaction.type)"
+           (click)="editTransaction(transaction)">
+        
+        <div class="transaction-icon" [class]="transaction.type">
+          <mat-icon>{{ transaction.type === 'income' ? 'add_circle' : 'remove_circle' }}</mat-icon>
+        </div>
 
-        <!-- Single compact row layout -->
-        <div class="transaction-compact-content">
-          <!-- Row 1: Category, Amount, Date -->
-          <div class="transaction-line-one">
-            <div class="category-section">
+        <div class="transaction-content">
+          <div class="transaction-header">
+            <div class="category-info">
               <span class="category-dot" [style.background]="getCategoryColor(transaction.category)"></span>
               <span class="category-name">{{ transaction.category }}</span>
             </div>
-            <div class="amount-section" [class]="transaction.type">
-              <span class="amount">{{ transaction.type === 'income' ? '+' : '-' }}₹{{ transaction.amount |
-                number:'1.2-2' }}</span>
+            <div class="transaction-amount" [class]="transaction.type">
+              {{ transaction.type === 'income' ? '+' : '-' }}₹{{ transaction.amount | number:'1.2-2' }}
             </div>
           </div>
-
-          <!-- Row 2: Description (max 2 lines) -->
-          <div class="transaction-line-two" *ngIf="transaction.description">
-            <div class="description">{{ transaction.description }}</div>
-            <div class="date">{{ formatDate(transaction.date) }}</div>
+          
+          <div class="transaction-details" *ngIf="transaction.description">
+            <p class="description">{{ transaction.description }}</p>
           </div>
-
-          <!-- Row 2 alt: Just date if no description -->
-          <div class="transaction-line-two" *ngIf="!transaction.description">
-            <div class="date-only">{{ formatDate(transaction.date) }}</div>
+          
+          <div class="transaction-footer">
+            <span class="date">{{ formatDate(transaction.date) }}</span>
+            <mat-icon class="chevron">chevron_right</mat-icon>
           </div>
         </div>
       </div>
