@@ -18,45 +18,25 @@
     </div>
   </div>
 
-  <!-- Quick Stats Overview
-  <div class="stats-overview" *ngIf="transactions.length">
-    <div class="stat-item glass-card">
-      <mat-icon class="stat-icon income">trending_up</mat-icon>
-      <div class="stat-info">
-        <span class="stat-value income">+₹{{ getTotalIncome() | number:'1.2-2' }}</span>
-        <span class="stat-label">Total Income</span>
-      </div>
-    </div>
-    <div class="stat-item glass-card">
-      <mat-icon class="stat-icon expense">trending_down</mat-icon>
-      <div class="stat-info">
-        <span class="stat-value expense">-₹{{ getTotalExpenses() | number:'1.2-2' }}</span>
-        <span class="stat-label">Total Expenses</span>
-      </div>
-    </div>
-    <div class="stat-item glass-card">
-      <mat-icon class="stat-icon balance">account_balance</mat-icon>
-      <div class="stat-info">
-        <span class="stat-value" [class.income]="getNetBalance() >= 0" [class.expense]="getNetBalance() < 0">
-          {{ getNetBalance() >= 0 ? '+' : '' }}₹{{ getNetBalance() | number:'1.2-2' }}
-        </span>
-        <span class="stat-label">Net Balance</span>
-      </div>
-    </div>
-  </div> -->
-
   <!-- Enhanced Transactions List -->
-  <div class="transactions-section" *ngIf="transactions.length; else noData">
+  <div class="transactions-section" *ngIf="allTransactions.length; else noData">
     <div class="section-header glass-header">
       <div class="header-left">
         <mat-icon class="section-icon">history</mat-icon>
-        <h2>Activity</h2>
+        <h2>Recent Activity</h2>
       </div>
-      <span class="transaction-count">{{ transactions.length }} transactions</span>
+      <div class="pagination-info">
+        <span class="page-display">
+          Page {{ currentPageNumber }} of {{ totalPages }}
+        </span>
+        <span class="showing-text">
+          Showing {{ startIndex }}-{{ endIndex }} of {{ totalTransactions }} transactions
+        </span>
+      </div>
     </div>
 
     <div class="transactions-grid">
-      <div *ngFor="let tx of transactions; let i = index" class="transaction-item glass-card"
+      <div *ngFor="let tx of paginatedTransactions; let i = index" class="transaction-item glass-card"
         [style.background]="hexToRgba(getCategoryColor(tx.category), 0.05)" [style.animation-delay.ms]="i * 50"
         (click)="openTransactionDetails(tx)">
 
@@ -88,6 +68,43 @@
               <mat-icon class="expand-icon">chevron_right</mat-icon>
             </div>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Fixed Custom Pagination Controls -->
+    <div class="pagination-container">
+      <div class="custom-pagination">
+        <div class="page-size-selector">
+          <label>Items per page:</label>
+          <select (change)="onPageSizeChange($event)" [value]="pageSize" class="page-size-select">
+            <option *ngFor="let size of pageSizeOptions" [value]="size">{{ size }}</option>
+          </select>
+        </div>
+
+        <div class="page-navigation">
+          <button class="nav-btn" [disabled]="currentPage === 0" (click)="currentPage = 0; updatePaginatedData()">
+            <mat-icon>first_page</mat-icon>
+          </button>
+
+          <button class="nav-btn" [disabled]="currentPage === 0"
+            (click)="currentPage = currentPage - 1; updatePaginatedData()">
+            <mat-icon>chevron_left</mat-icon>
+          </button>
+
+          <span class="page-info">
+            Page {{ currentPageNumber }} of {{ totalPages }}
+          </span>
+
+          <button class="nav-btn" [disabled]="currentPage === totalPages - 1"
+            (click)="currentPage = currentPage + 1; updatePaginatedData()">
+            <mat-icon>chevron_right</mat-icon>
+          </button>
+
+          <button class="nav-btn" [disabled]="currentPage === totalPages - 1"
+            (click)="currentPage = totalPages - 1; updatePaginatedData()">
+            <mat-icon>last_page</mat-icon>
+          </button>
         </div>
       </div>
     </div>

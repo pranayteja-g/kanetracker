@@ -4,6 +4,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { DexieService } from '../services/dexie.service';
 import { Transaction } from '../models/transaction.interface';
 import { Category } from '../models/category.interface';
@@ -14,13 +15,26 @@ import { TransactionDetailDialogComponent } from '../transaction-detail-dialog/t
 @Component({
   selector: 'app-transactions',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatIconModule, MatButtonModule],
+  imports: [
+    CommonModule,
+    MatCardModule,
+    MatIconModule,
+    MatButtonModule,
+    MatPaginatorModule
+  ],
   templateUrl: './transactions.component.html',
   styleUrls: ['./transactions.component.css'],
 })
 export class TransactionsComponent implements OnInit {
-  transactions: Transaction[] = [];
+  allTransactions: Transaction[] = [];
+  paginatedTransactions: Transaction[] = [];
   categories: Category[] = [];
+
+  // Pagination properties
+  pageSize = 20;
+  currentPage = 0;
+  totalTransactions = 0;
+  pageSizeOptions = [10, 20, 50, 100];
 
   constructor(
     private dexieService: DexieService,
@@ -34,8 +48,39 @@ export class TransactionsComponent implements OnInit {
   }
 
   async loadData() {
-    this.transactions = await this.dexieService.getAllTransactions();
+    this.allTransactions = await this.dexieService.getAllTransactions();
     this.categories = await this.dexieService.getAllCategories();
+
+    // Sort transactions by date (latest first)
+    this.allTransactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    this.totalTransactions = this.allTransactions.length;
+    this.updatePaginatedData();
+  }
+
+  updatePaginatedData() {
+    const startIndex = this.currentPage * this.pageSize;
+    const endIndex = startIndex + this.pageSize;
+    this.paginatedTransactions = this.allTransactions.slice(startIndex, endIndex);
+  }
+
+  onPageChange(event: PageEvent) {
+    this.pageSize = event.pageSize;
+    this.currentPage = event.pageIndex;
+    this.updatePaginatedData();
+
+    // Scroll to top after page change
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // Fixed method for page size change with proper type casting
+  onPageSizeChange(event: Event) {
+    const target = event.target as HTMLSelectElement;
+    if (target) {
+      this.pageSize = +target.value;
+      this.currentPage = 0;
+      this.updatePaginatedData();
+    }
   }
 
   navigateToSearch() {
@@ -54,7 +99,6 @@ export class TransactionsComponent implements OnInit {
     return `rgba(${r}, ${g}, ${b}, ${opacity})`;
   }
 
-  // New method to open transaction details
   openTransactionDetails(transaction: Transaction) {
     const dialogRef = this.dialog.open(TransactionDetailDialogComponent, {
       width: '500px',
@@ -68,6 +112,7 @@ export class TransactionsComponent implements OnInit {
       }
     });
   }
+
   async deleteTransaction(id?: number) {
     if (!id) return;
     if (confirm('Are you sure you want to delete this transaction?')) {
@@ -78,13 +123,13 @@ export class TransactionsComponent implements OnInit {
   }
 
   getTotalIncome(): number {
-    return this.transactions
+    return this.allTransactions
       .filter(tx => tx.type === 'income')
       .reduce((sum, tx) => sum + tx.amount, 0);
   }
 
   getTotalExpenses(): number {
-    return this.transactions
+    return this.allTransactions
       .filter(tx => tx.type === 'expense')
       .reduce((sum, tx) => sum + tx.amount, 0);
   }
@@ -93,4 +138,20 @@ export class TransactionsComponent implements OnInit {
     return this.getTotalIncome() - this.getTotalExpenses();
   }
 
+  // Custom pagination display methods
+  get currentPageNumber(): number {
+    return this.currentPage + 1;
+  }
+
+  get totalPages(): number {
+    return Math.ceil(this.totalTransactions / this.pageSize);
+  }
+
+  get startIndex(): number {
+    return this.currentPage * this.pageSize + 1;
+  }
+
+  get endIndex(): number {
+    return Math.min((this.currentPage + 1) * this.pageSize, this.totalTransactions);
+  }
 }

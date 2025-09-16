@@ -21,6 +21,9 @@ import {
   LineController, BarController, Legend, Tooltip
 } from 'chart.js';
 
+import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
+import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
+
 Chart.register(
   ArcElement, BarElement, LineElement, PointElement,
   CategoryScale, LinearScale, DoughnutController,
@@ -71,7 +74,6 @@ interface ChartConfig {
   template: `
     <div class="analytics-container">
       <h1>Financial Analytics</h1>
-      
       <!-- Date Range Toggle -->
       <div class="date-range-toggle">
         <button mat-raised-button color="primary" (click)="toggleDateRange()" class="toggle-btn">
@@ -79,7 +81,6 @@ interface ChartConfig {
           {{ showDateRange ? 'Hide Date Range' : 'Select Date Range' }}
         </button>
       </div>
-
       <!-- Date Range Picker -->
       <mat-card class="date-range-card" *ngIf="showDateRange">
         <mat-card-header>
@@ -102,11 +103,11 @@ interface ChartConfig {
             <mat-form-field appearance="outline" class="date-range-field">
               <mat-label>Custom Date Range</mat-label>
               <mat-date-range-input [formGroup]="rangeForm" [rangePicker]="picker">
-                <input matStartDate formControlName="start" placeholder="Start date">
-                <input matEndDate formControlName="end" placeholder="End date">
+                <input matStartDate formControlName="start" placeholder="Start date" readonly>
+                <input matEndDate formControlName="end" placeholder="End date" readonly>
               </mat-date-range-input>
               <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
-              <mat-date-range-picker #picker></mat-date-range-picker>
+              <mat-date-range-picker #picker [touchUi]="isMobile"></mat-date-range-picker>
             </mat-form-field>
           </div>
           <div class="selected-range" *ngIf="currentDateRange.start && currentDateRange.end">
@@ -119,7 +120,6 @@ interface ChartConfig {
           </div>
         </mat-card-content>
       </mat-card>
-
       <!-- Current Range Display -->
       <div class="current-range-display" *ngIf="!showDateRange && currentDateRange.start && currentDateRange.end">
         <mat-icon>schedule</mat-icon>
@@ -129,7 +129,6 @@ interface ChartConfig {
           ({{ getDateRangeDays() }} days)
         </span>
       </div>
-
       <!-- Summary Cards -->
       <div class="summary-cards">
         <div 
@@ -145,7 +144,6 @@ interface ChartConfig {
           </div>
         </div>
       </div>
-
       <!-- Interactive Chart Cards -->
       <div class="charts-section">
         <mat-card 
@@ -183,7 +181,6 @@ interface ChartConfig {
                   </div>
                 </ng-template>
               </div>
-
               <!-- Monthly Trends -->
               <div *ngSwitchCase="'monthlyTrends'">
                 <div class="chart-container" *ngIf="lineChartData.datasets.length > 0; else noTrendData">
@@ -197,7 +194,6 @@ interface ChartConfig {
                   </div>
                 </ng-template>
               </div>
-
               <!-- Income vs Expenses -->
               <div *ngSwitchCase="'incomeVsExpenses'">
                 <div class="chart-container" *ngIf="barChartData.datasets.length > 0; else noComparisonData">
@@ -211,7 +207,6 @@ interface ChartConfig {
                   </div>
                 </ng-template>
               </div>
-
               <!-- Top Categories -->
               <div *ngSwitchCase="'topCategories'">
                 <div class="top-categories" *ngIf="topCategories.length > 0; else noTopCategories">
@@ -251,13 +246,12 @@ interface ChartConfig {
   styleUrls: ['./analytics.component.css']
 })
 export class AnalyticsComponent implements OnInit {
-  // Data properties
   totalIncome = 0;
   totalExpenses = 0;
   netBalance = 0;
   topCategories: CategorySummary[] = [];
 
-  // UI state
+  isMobile = false;
   showDateRange = false;
   rangeForm = new FormGroup({
     start: new FormControl<Date | null>(null),
@@ -273,7 +267,6 @@ export class AnalyticsComponent implements OnInit {
     topCategories: false
   };
 
-  // Configuration arrays
   readonly datePresets = [
     { key: 'last7Days', label: 'Last 7 Days' },
     { key: 'lastMonth', label: 'Last Month' },
@@ -282,7 +275,6 @@ export class AnalyticsComponent implements OnInit {
     { key: 'allTime', label: 'All Time' }
   ];
 
-  // Chart configurations
   pieChartType: ChartType = 'doughnut';
   pieChartData: ChartData<'doughnut'> = {
     labels: [],
@@ -295,7 +287,6 @@ export class AnalyticsComponent implements OnInit {
   barChartType: ChartType = 'bar';
   barChartData: ChartData<'bar'> = { labels: [], datasets: [] };
 
-  // Chart options
   readonly pieChartOptions: ChartConfiguration['options'] = {
     responsive: true,
     maintainAspectRatio: false,
@@ -335,11 +326,19 @@ export class AnalyticsComponent implements OnInit {
 
   readonly barChartOptions: ChartConfiguration['options'] = this.lineChartOptions;
 
-  constructor(private dexieService: DexieService) { }
+  constructor(
+    private dexieService: DexieService,
+    private breakpointObserver: BreakpointObserver
+  ) { }
 
   async ngOnInit() {
+    // Responsive mobile detection for touch UI
+    this.isMobile = this.breakpointObserver.isMatched('(max-width: 900px)');
     this.setDateRange('lastMonth');
-    this.rangeForm.valueChanges.subscribe(value => {
+    this.rangeForm.valueChanges.pipe(
+      debounceTime(350),
+      distinctUntilChanged()
+    ).subscribe(value => {
       if (value.start && value.end) {
         this.currentDateRange = { start: value.start, end: value.end };
         this.loadSummaryData();
@@ -347,7 +346,6 @@ export class AnalyticsComponent implements OnInit {
     });
   }
 
-  // Computed properties
   get summaryStats(): SummaryStatItem[] {
     return [
       {
@@ -408,7 +406,6 @@ export class AnalyticsComponent implements OnInit {
     ];
   }
 
-  // Event handlers
   toggleDateRange(): void {
     this.showDateRange = !this.showDateRange;
   }
@@ -417,44 +414,32 @@ export class AnalyticsComponent implements OnInit {
     const now = new Date();
     let start: Date;
     let end: Date;
-
     switch (preset) {
       case 'last7Days':
         end = new Date(now);
         start = new Date(now);
         start.setDate(now.getDate() - 6);
         break;
-
       case 'lastMonth':
-        // Get the previous month's first day
         start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-        // Get the previous month's last day  
         end = new Date(now.getFullYear(), now.getMonth(), 0);
         break;
-
       case 'last3Months':
         end = new Date(now);
         start = new Date(now.getFullYear(), now.getMonth() - 3, now.getDate());
         break;
-
       case 'lastYear':
         end = new Date(now);
         start = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
         break;
-
       case 'allTime':
         start = new Date(2020, 0, 1);
         end = new Date(now);
         break;
-
-      default:
-        return;
+      default: return;
     }
-
-    // Ensure proper time boundaries
     end.setHours(23, 59, 59, 999);
     start.setHours(0, 0, 0, 0);
-
     this.currentDateRange = { start, end };
     this.rangeForm.patchValue({ start, end }, { emitEvent: false });
     this.loadSummaryData();
@@ -473,10 +458,8 @@ export class AnalyticsComponent implements OnInit {
     }
   }
 
-  // Data processing methods
   private filterTransactionsByDateRange(transactions: Transaction[]): Transaction[] {
     if (!this.currentDateRange.start || !this.currentDateRange.end) return transactions;
-
     return transactions.filter(t => {
       const transactionDate = new Date(t.date);
       return transactionDate >= this.currentDateRange.start! &&
@@ -487,13 +470,11 @@ export class AnalyticsComponent implements OnInit {
   private generateMonthsMap(startDate: Date, endDate: Date): Map<string, MonthData> {
     const monthsMap = new Map<string, MonthData>();
     const current = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
-
     while (current <= endDate) {
       const monthKey = current.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
       monthsMap.set(monthKey, { income: 0, expenses: 0 });
       current.setMonth(current.getMonth() + 1);
     }
-
     return monthsMap;
   }
 
@@ -509,13 +490,12 @@ export class AnalyticsComponent implements OnInit {
 
   private async generateSpecificChart(chartName: keyof typeof this.chartVisibility): Promise<void> {
     try {
+      // Performance: only for visible charts and using async/await
       const [allTransactions, categories] = await Promise.all([
         this.dexieService.getAllTransactions(),
         this.dexieService.getAllCategories()
       ]);
-
       const filteredTransactions = this.filterTransactionsByDateRange(allTransactions);
-
       switch (chartName) {
         case 'categoryChart':
           this.generateCategoryChart(filteredTransactions, categories);
@@ -539,11 +519,9 @@ export class AnalyticsComponent implements OnInit {
     this.totalIncome = transactions
       .filter(t => t.type === 'income')
       .reduce((sum, t) => sum + t.amount, 0);
-
     this.totalExpenses = transactions
       .filter(t => t.type === 'expense')
       .reduce((sum, t) => sum + t.amount, 0);
-
     this.netBalance = this.totalIncome - this.totalExpenses;
   }
 
@@ -553,16 +531,13 @@ export class AnalyticsComponent implements OnInit {
       acc[t.category] = (acc[t.category] || 0) + t.amount;
       return acc;
     }, {} as Record<string, number>);
-
     const categoryColors = categories.reduce((acc, cat) => {
       acc[cat.name] = cat.color;
       return acc;
     }, {} as Record<string, string>);
-
     const sortedCategories = Object.entries(categoryTotals)
       .sort(([, a], [, b]) => b - a)
       .slice(0, 8);
-
     this.pieChartData = {
       labels: sortedCategories.map(([name]) => name),
       datasets: [{
@@ -576,14 +551,11 @@ export class AnalyticsComponent implements OnInit {
 
   private generateMonthlyTrendsChart(transactions: Transaction[]): void {
     if (!this.currentDateRange.start || !this.currentDateRange.end) return;
-
     const monthsMap = this.generateMonthsMap(this.currentDateRange.start, this.currentDateRange.end);
-
     transactions.forEach(t => {
       const transactionDate = new Date(t.date);
       const monthKey = transactionDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
       const monthData = monthsMap.get(monthKey);
-
       if (monthData) {
         if (t.type === 'income') {
           monthData.income += t.amount;
@@ -592,11 +564,9 @@ export class AnalyticsComponent implements OnInit {
         }
       }
     });
-
     const months = Array.from(monthsMap.keys());
     const incomeData = Array.from(monthsMap.values()).map(v => v.income);
     const expenseData = Array.from(monthsMap.values()).map(v => v.expenses);
-
     this.lineChartData = {
       labels: months,
       datasets: [
@@ -622,27 +592,22 @@ export class AnalyticsComponent implements OnInit {
 
   private generateIncomeVsExpensesChart(transactions: Transaction[]): void {
     if (!this.currentDateRange.end || !this.currentDateRange.start) return;
-
     const end = new Date(this.currentDateRange.end);
     const start = new Date(Math.max(
       this.currentDateRange.start.getTime(),
       new Date(end.getFullYear(), end.getMonth() - 5, 1).getTime()
     ));
-
     const monthsMap = new Map<string, MonthData>();
     const current = new Date(start.getFullYear(), start.getMonth(), 1);
-
     while (current <= end) {
       const monthKey = current.toLocaleDateString('en-US', { month: 'long' });
       monthsMap.set(monthKey, { income: 0, expenses: 0 });
       current.setMonth(current.getMonth() + 1);
     }
-
     transactions.forEach(t => {
       const transactionDate = new Date(t.date);
       const monthKey = transactionDate.toLocaleDateString('en-US', { month: 'long' });
       const monthData = monthsMap.get(monthKey);
-
       if (monthData) {
         if (t.type === 'income') {
           monthData.income += t.amount;
@@ -651,11 +616,9 @@ export class AnalyticsComponent implements OnInit {
         }
       }
     });
-
     const months = Array.from(monthsMap.keys());
     const incomeData = Array.from(monthsMap.values()).map(v => v.income);
     const expenseData = Array.from(monthsMap.values()).map(v => v.expenses);
-
     this.barChartData = {
       labels: months,
       datasets: [
@@ -683,7 +646,6 @@ export class AnalyticsComponent implements OnInit {
       acc[t.category] = (acc[t.category] || 0) + t.amount;
       return acc;
     }, {} as Record<string, number>);
-
     this.topCategories = Object.entries(categoryTotals)
       .map(([name, amount]) => ({
         name,
