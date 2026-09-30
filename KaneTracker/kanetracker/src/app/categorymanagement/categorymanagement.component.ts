@@ -1,172 +1,105 @@
 import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { MatCardModule } from '@angular/material/card';
+import { NgFor, NgIf } from '@angular/common';
+import { Router } from '@angular/router';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
-import { MatButtonModule } from '@angular/material/button';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { DexieService } from '../services/dexie.service';
 import { Category } from '../models/category.interface';
 import { CategoryDialogComponent } from '../category-dialog/category-dialog.component';
 
 @Component({
   selector: 'app-categorymanagement',
-  imports: [
-    CommonModule, 
-    MatCardModule, 
-    MatIconModule, 
-    MatButtonModule, // FAB is part of MatButtonModule
-    MatDialogModule
-  ],
+  standalone: true,
+  imports: [NgFor, NgIf, MatIconModule, MatDialogModule],
   template: `
-    <div class="categories-container">
-      <div class="header">
-        <h1>Manage Categories</h1>
-        <button mat-fab color="primary" class="add-fab" (click)="createCategory()">
-          <mat-icon>add</mat-icon>
-        </button>
-      </div>
-      
-      <div class="categories-section">
-        <h2>Income Categories</h2>
-        <div class="categories-list" *ngIf="incomeCategories.length > 0; else noIncomeCategories">
-          <div *ngFor="let category of incomeCategories" class="category-card">
-            <div class="category-info">
-              <div class="category-dot" [style.background]="category.color"></div>
-              <div class="category-details">
-                <span class="category-name">{{ category.name }}</span>
-                <span class="usage-count">{{ getCategoryUsage(category.name) }} transactions</span>
-              </div>
-            </div>
-            <div class="category-actions">
-              <button mat-icon-button (click)="editCategory(category)">
-                <mat-icon>edit</mat-icon>
-              </button>
-              <button mat-icon-button color="warn" (click)="deleteCategory(category)" 
-                      [disabled]="getCategoryUsage(category.name) > 0">
-                <mat-icon>delete</mat-icon>
-              </button>
-            </div>
-          </div>
-        </div>
-        <ng-template #noIncomeCategories>
-          <p class="no-categories">No income categories yet</p>
-        </ng-template>
+    <div class="page" *ngIf="loaded">
+      <header class="top">
+        <button class="icon-btn" (click)="back()" aria-label="Back"><mat-icon>arrow_back</mat-icon></button>
+        <h1>Categories</h1>
+        <button class="icon-btn" (click)="open()" aria-label="Add category"><mat-icon>add</mat-icon></button>
+      </header>
+
+      <div class="chips">
+        <button class="chip" [class.on]="tab === 'expense'" (click)="tab = 'expense'">Expense</button>
+        <button class="chip" [class.on]="tab === 'income'" (click)="tab = 'income'">Income</button>
       </div>
 
-      <div class="categories-section">
-        <h2>Expense Categories</h2>
-        <div class="categories-list" *ngIf="expenseCategories.length > 0; else noExpenseCategories">
-          <div *ngFor="let category of expenseCategories" class="category-card">
-            <div class="category-info">
-              <div class="category-dot" [style.background]="category.color"></div>
-              <div class="category-details">
-                <span class="category-name">{{ category.name }}</span>
-                <span class="usage-count">{{ getCategoryUsage(category.name) }} transactions</span>
-              </div>
-            </div>
-            <div class="category-actions">
-              <button mat-icon-button (click)="editCategory(category)">
-                <mat-icon>edit</mat-icon>
-              </button>
-              <button mat-icon-button color="warn" (click)="deleteCategory(category)"
-                      [disabled]="getCategoryUsage(category.name) > 0">
-                <mat-icon>delete</mat-icon>
-              </button>
-            </div>
-          </div>
+      <div class="list">
+        <div class="row" *ngFor="let c of shown; trackBy: byId">
+          <button class="main" (click)="open(c)">
+            <i [style.background]="c.color"></i>
+            <span class="m"><b>{{ c.name }}</b><span>{{ used(c) }} transaction{{ used(c) === 1 ? '' : 's' }}</span></span>
+          </button>
+          <button class="icon-btn" (click)="remove(c)" [disabled]="used(c) > 0"
+            [attr.aria-label]="'Delete ' + c.name" [title]="used(c) ? 'In use' : 'Delete'"><mat-icon>delete_outline</mat-icon></button>
         </div>
-        <ng-template #noExpenseCategories>
-          <p class="no-categories">No expense categories yet</p>
-        </ng-template>
+      </div>
+
+      <div class="empty" *ngIf="!shown.length">
+        <mat-icon>label_outline</mat-icon>
+        <p>No {{ tab }} categories</p>
+        <button class="btn" (click)="open()">Add category</button>
       </div>
     </div>
   `,
-  styleUrl: './categorymanagement.component.css'
+  styles: [`
+    .top { justify-content: flex-start; gap: 4px; }
+    .top h1 { flex: 1; }
+    .list { margin-top: 12px; }
+    .row { display: flex; align-items: center; border-bottom: 1px solid var(--k-line); }
+    .row:last-child { border-bottom: 0; }
+    .main { flex: 1; display: flex; align-items: center; gap: 12px; padding: 14px 0; border: 0; background: none; text-align: left; min-width: 0; }
+    .main i { width: 14px; height: 14px; border-radius: 50%; flex: none; }
+    .m { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+    .m b { font-weight: 500; }
+    .m span { font-size: 13px; color: var(--k-muted); }
+    .icon-btn:disabled { opacity: .25; cursor: default; }
+  `],
 })
 export class CategorymanagementComponent implements OnInit {
-  incomeCategories: Category[] = [];
-  expenseCategories: Category[] = [];
-  categoryUsage: { [categoryName: string]: number } = {};
+  tab: 'expense' | 'income' = 'expense';
+  loaded = false;
+  private cats: Category[] = [];
+  private usage: Record<string, number> = {};
 
-  constructor(
-    private dexieService: DexieService,
-    private snackBar: MatSnackBar,
-    private dialog: MatDialog
-  ) { }
+  constructor(private db: DexieService, private snack: MatSnackBar, private dialog: MatDialog, private router: Router) {}
 
   async ngOnInit() {
-    await this.loadCategories();
+    await this.load();
+    this.loaded = true;
   }
 
-  async loadCategories() {
-    const allCategories = await this.dexieService.getAllCategories();
-    this.incomeCategories = allCategories.filter(c => c.type === 'income');
-    this.expenseCategories = allCategories.filter(c => c.type === 'expense');
-
-    // Load usage counts
-    for (const category of allCategories) {
-      this.categoryUsage[category.name] = await this.dexieService.getCategoryUsageCount(category.name);
-    }
+  private async load() {
+    const [cats, usage] = await Promise.all([this.db.getAllCategories(), this.db.getCategoryUsageCounts()]);
+    this.cats = cats.sort((a, b) => a.name.localeCompare(b.name));
+    this.usage = usage;
   }
 
-  getCategoryUsage(categoryName: string): number {
-    return this.categoryUsage[categoryName] || 0;
+  get shown() {
+    return this.cats.filter(c => c.type === this.tab);
   }
 
-  createCategory() {
-    const dialogRef = this.dialog.open(CategoryDialogComponent, {
-      width: '90vw',
-      maxWidth: '450px',
-      data: {}
-    });
+  byId = (_: number, c: Category) => c.id;
+  used = (c: Category) => this.usage[c.name] || 0;
+  back() { history.length > 1 ? history.back() : this.router.navigate(['/dashboard']); }
 
-    dialogRef.afterClosed().subscribe(result => {
-      if (result?.success) {
-        this.loadCategories();
-      }
-    });
+  open(category?: Category) {
+    this.dialog
+      .open(CategoryDialogComponent, { width: '92vw', maxWidth: '420px', data: category ? { category } : { category: { type: this.tab } } })
+      .afterClosed()
+      .subscribe(r => r?.success && this.load());
   }
 
-  editCategory(category: Category) {
-    const dialogRef = this.dialog.open(CategoryDialogComponent, {
-      width: '90vw',
-      maxWidth: '450px',
-      data: { category }
-    });
-
-    dialogRef.afterClosed().subscribe(result => {
-      if (result?.success) {
-        this.loadCategories();
-      }
-    });
-  }
-
-  async deleteCategory(category: Category) {
-    const usageCount = this.getCategoryUsage(category.name);
-
-    if (usageCount > 0) {
-      this.snackBar.open(
-        `Cannot delete "${category.name}" - it's used in ${usageCount} transaction(s)`,
-        'Close',
-        { duration: 4000, horizontalPosition: 'center', verticalPosition: 'top' }
-      );
-      return;
-    }
-
-    const confirmed = confirm(`Are you sure you want to delete the category "${category.name}"?`);
-    if (confirmed && category.id) {
-      try {
-        await this.dexieService.deleteCategory(category.id);
-        this.snackBar.open(`Category "${category.name}" deleted successfully`, 'Close', {
-          duration: 2000
-        });
-        await this.loadCategories();
-      } catch (error: any) {
-        this.snackBar.open(error.message || 'Failed to delete category', 'Close', {
-          duration: 4000
-        });
-      }
+  async remove(c: Category) {
+    if (!c.id || this.used(c) > 0) return;
+    if (!confirm(`Delete "${c.name}"?`)) return;
+    try {
+      await this.db.deleteCategory(c.id);
+      this.snack.open('Deleted', undefined, { duration: 1500 });
+      await this.load();
+    } catch (e: any) {
+      this.snack.open(e?.message || 'Delete failed', 'OK', { duration: 4000 });
     }
   }
 }

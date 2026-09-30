@@ -1,226 +1,148 @@
 import { Component, Inject, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { MatButtonModule } from '@angular/material/button';
-import { MatSelectModule } from '@angular/material/select';
-import { MatDatepickerModule } from '@angular/material/datepicker';
-import { MatNativeDateModule } from '@angular/material/core';
-import { MatButtonToggleModule } from '@angular/material/button-toggle';
-import { MatSnackBar } from '@angular/material/snack-bar';
+import { DatePipe, NgClass, NgFor, NgIf } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { DexieService } from '../services/dexie.service';
 import { Transaction } from '../models/transaction.interface';
 import { Category } from '../models/category.interface';
+import { InrPipe } from '../shared/inr.pipe';
+
+const pad = (n: number) => String(n).padStart(2, '0');
+const iso = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 
 @Component({
   selector: 'app-transaction-detail-dialog',
   standalone: true,
-  imports: [
-    CommonModule,
-    ReactiveFormsModule,
-    MatDialogModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatButtonModule,
-    MatSelectModule,
-    MatDatepickerModule,
-    MatNativeDateModule,
-    MatButtonToggleModule,
-    MatIconModule
-  ],
+  imports: [NgIf, NgFor, NgClass, DatePipe, FormsModule, MatDialogModule, MatIconModule, InrPipe],
   template: `
-    <div class="dialog-container">
-      <div class="dialog-header">
-        <h2 mat-dialog-title>{{ isEditMode ? 'Edit Transaction' : 'Transaction Details' }}</h2>
-        <button mat-icon-button mat-dialog-close>
-          <mat-icon>close</mat-icon>
-        </button>
-      </div>
+    <div class="dlg">
+      <header>
+        <h2 mat-dialog-title>{{ edit ? 'Edit' : 'Transaction' }}</h2>
+        <button class="icon-btn" mat-dialog-close aria-label="Close"><mat-icon>close</mat-icon></button>
+      </header>
 
-      <div mat-dialog-content class="dialog-content">
-        <form [formGroup]="transactionForm" *ngIf="isEditMode; else viewMode">
-          <!-- Amount -->
-          <mat-form-field appearance="outline" class="full-width">
-            <mat-label>Amount</mat-label>
-            <input matInput type="number" formControlName="amount" placeholder="Enter amount">
-            <mat-error *ngIf="transactionForm.get('amount')?.invalid">
-              Amount is required and must be positive
-            </mat-error>
-          </mat-form-field>
-
-          <!-- Type Toggle -->
-          <mat-button-toggle-group formControlName="type" class="full-width" (change)="onTypeChange()">
-            <mat-button-toggle value="income">Income</mat-button-toggle>
-            <mat-button-toggle value="expense">Expense</mat-button-toggle>
-          </mat-button-toggle-group>
-
-          <!-- Category -->
-          <mat-form-field appearance="outline" class="full-width">
-            <mat-label>Category</mat-label>
-            <mat-select formControlName="category">
-              <mat-option *ngFor="let cat of filteredCategories" [value]="cat.name">
-                <span class="color-dot" [style.background]="cat.color"></span> {{ cat.name }}
-              </mat-option>
-            </mat-select>
-          </mat-form-field>
-
-          <!-- Date -->
-          <mat-form-field appearance="outline" class="full-width">
-            <mat-label>Date</mat-label>
-            <input matInput [matDatepicker]="picker" formControlName="date">
-            <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
-            <mat-datepicker #picker></mat-datepicker>
-          </mat-form-field>
-
-          <!-- Description -->
-          <mat-form-field appearance="outline" class="full-width">
-            <mat-label>Description</mat-label>
-            <textarea matInput formControlName="description" rows="3"></textarea>
-          </mat-form-field>
-        </form>
-
-        <!-- View Mode Template -->
-        <ng-template #viewMode>
-          <div class="transaction-details">
-            <div class="detail-row">
-              <span class="detail-label">Amount:</span>
-              <span class="detail-value" [ngClass]="data.transaction.type">
-                {{ data.transaction.type === 'income' ? '+' : '-' }}₹{{ data.transaction.amount | number:'1.2-2' }}
-              </span>
-            </div>
-            <div class="detail-row">
-              <span class="detail-label">Type:</span>
-              <span class="detail-value">{{ data.transaction.type | titlecase }}</span>
-            </div>
-            <div class="detail-row">
-              <span class="detail-label">Category:</span>
-              <span class="detail-value">{{ data.transaction.category }}</span>
-            </div>
-            <div class="detail-row">
-              <span class="detail-label">Date:</span>
-              <span class="detail-value">{{ data.transaction.date | date:'fullDate' }}</span>
-            </div>
-            <div class="detail-row">
-              <span class="detail-label">Description:</span>
-              <span class="detail-value">{{ data.transaction.description || 'No description' }}</span>
-            </div>
-          </div>
-        </ng-template>
-      </div>
-
-      <div mat-dialog-actions class="dialog-actions">
-        <div class="action-buttons" *ngIf="!isEditMode">
-          <button mat-button (click)="toggleEditMode()">
-            <mat-icon>edit</mat-icon>
-            Edit
-          </button>
-          <button mat-button color="warn" (click)="deleteTransaction()">
-            <mat-icon>delete</mat-icon>
-            Delete
-          </button>
+      <ng-container *ngIf="!edit">
+        <p class="amt" [ngClass]="tx.type">{{ tx.type === 'income' ? '+' : '−' }}{{ tx.amount | inr }}</p>
+        <dl>
+          <dt>Category</dt><dd>{{ tx.category }}</dd>
+          <dt>Date</dt><dd>{{ tx.date | date:'EEE, d MMM y' }}</dd>
+          <dt>Note</dt><dd>{{ tx.description || '—' }}</dd>
+        </dl>
+        <div class="actions">
+          <button class="btn ghost" (click)="startEdit()"><mat-icon>edit</mat-icon>Edit</button>
+          <button class="btn ghost del" (click)="remove()"><mat-icon>delete_outline</mat-icon>Delete</button>
         </div>
-        
-        <div class="action-buttons" *ngIf="isEditMode">
-          <button mat-button (click)="cancelEdit()">Cancel</button>
-          <button mat-raised-button color="primary" (click)="saveTransaction()" [disabled]="transactionForm.invalid">
-            Save Changes
-          </button>
+      </ng-container>
+
+      <ng-container *ngIf="edit">
+        <div class="seg">
+          <button type="button" [class.on]="f.type === 'expense'" (click)="setType('expense')">Expense</button>
+          <button type="button" [class.on]="f.type === 'income'" (click)="setType('income')">Income</button>
         </div>
-      </div>
+        <label><span class="label">Amount ₹</span><input type="number" inputmode="decimal" min="0.01" step="0.01" [(ngModel)]="f.amount" /></label>
+        <label><span class="label">Category</span>
+          <select [(ngModel)]="f.category">
+            <option value="" disabled>Select</option>
+            <option *ngFor="let c of cats" [value]="c.name">{{ c.name }}</option>
+          </select></label>
+        <label><span class="label">Date</span><input type="date" [(ngModel)]="f.date" /></label>
+        <label><span class="label">Note</span><input type="text" maxlength="200" [(ngModel)]="f.description" /></label>
+        <div class="actions">
+          <button class="btn ghost" (click)="edit = false">Cancel</button>
+          <button class="btn" (click)="save()" [disabled]="!valid || saving">Save</button>
+        </div>
+      </ng-container>
     </div>
   `,
-  styleUrls: ['./transaction-detail-dialog.component.css']
+  styles: [`
+    .dlg { padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+    header { display: flex; align-items: center; justify-content: space-between; }
+    h2 { margin: 0; padding: 0; font-size: 18px; font-weight: 600; }
+    h2::before { display: none; }
+    .amt { margin: 0; font-size: 36px; font-weight: 600; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+    .amt.income { color: var(--k-income); }
+    dl { display: grid; grid-template-columns: 80px 1fr; gap: 10px 8px; margin: 0; }
+    dt { color: var(--k-muted); font-size: 13px; padding-top: 2px; }
+    dd { margin: 0; word-break: break-word; }
+    .actions { display: flex; gap: 8px; }
+    .actions .btn { flex: 1; }
+    .del { color: #b91c1c; }
+    label { display: flex; flex-direction: column; gap: 4px; }
+    input, select { min-height: 48px; padding: 0 12px; border: 1px solid var(--k-line); border-radius: 12px; background: #fff; font: inherit; font-size: 16px; }
+    .seg { display: flex; padding: 3px; border-radius: 999px; background: var(--k-line); }
+    .seg button { flex: 1; border: 0; background: none; padding: 8px; border-radius: 999px; font-size: 14px; color: var(--k-muted); }
+    .seg button.on { background: #fff; color: var(--k-ink); font-weight: 500; box-shadow: 0 1px 3px rgba(0,0,0,.1); }
+  `],
 })
 export class TransactionDetailDialogComponent implements OnInit {
-  transactionForm!: FormGroup;
-  isEditMode = false;
-  allCategories: Category[] = [];
-  filteredCategories: Category[] = [];
+  tx: Transaction;
+  edit = false;
+  saving = false;
+  cats: Category[] = [];
+  f = { type: 'expense' as 'income' | 'expense', amount: null as number | null, category: '', date: '', description: '' };
+  private all: Category[] = [];
 
   constructor(
-    public dialogRef: MatDialogRef<TransactionDetailDialogComponent>,
-    @Inject(MAT_DIALOG_DATA) public data: { transaction: Transaction },
-    private fb: FormBuilder,
-    private dexieService: DexieService,
-    private snackBar: MatSnackBar
-  ) {}
+    private ref: MatDialogRef<TransactionDetailDialogComponent>,
+    @Inject(MAT_DIALOG_DATA) data: { transaction: Transaction },
+    private db: DexieService,
+    private snack: MatSnackBar
+  ) {
+    this.tx = data.transaction;
+  }
 
   async ngOnInit() {
-    this.initializeForm();
-    this.allCategories = await this.dexieService.getAllCategories();
-    this.filterCategories();
+    this.all = await this.db.getAllCategories();
   }
 
-  initializeForm() {
-    this.transactionForm = this.fb.group({
-      amount: [this.data.transaction.amount, [Validators.required, Validators.min(0.01)]],
-      type: [this.data.transaction.type, Validators.required],
-      category: [this.data.transaction.category, Validators.required],
-      date: [new Date(this.data.transaction.date), Validators.required],
-      description: [this.data.transaction.description || '']
-    });
+  get valid() {
+    return !!this.f.amount && this.f.amount > 0 && !!this.f.category && !!this.f.date;
   }
 
-  filterCategories() {
-    const selectedType = this.transactionForm?.get('type')?.value || this.data.transaction.type;
-    this.filteredCategories = this.allCategories.filter(cat => cat.type === selectedType);
+  startEdit() {
+    const t = this.tx;
+    this.f = { type: t.type, amount: t.amount, category: t.category, date: iso(new Date(t.date)), description: t.description || '' };
+    this.cats = this.all.filter(c => c.type === t.type);
+    this.edit = true;
   }
 
-  onTypeChange() {
-    this.filterCategories();
-    this.transactionForm.patchValue({ category: '' }); // Reset category when type changes
+  setType(t: 'income' | 'expense') {
+    if (t === this.f.type) return;
+    this.f.type = t;
+    this.f.category = '';
+    this.cats = this.all.filter(c => c.type === t);
   }
 
-  toggleEditMode() {
-    this.isEditMode = true;
-    this.initializeForm(); // Reset form to original values
-  }
-
-  cancelEdit() {
-    this.isEditMode = false;
-    this.initializeForm(); // Reset form to original values
-  }
-
-  async saveTransaction() {
-    if (this.transactionForm.valid && this.data.transaction.id) {
-      try {
-        const updatedTransaction = {
-          ...this.transactionForm.value,
-          date: this.transactionForm.value.date.toISOString()
-        };
-        
-        await this.dexieService.updateTransaction(this.data.transaction.id, updatedTransaction);
-        
-        this.snackBar.open('Transaction updated successfully', 'Close', { 
-          duration: 2000 
-        });
-        
-        this.dialogRef.close({ updated: true });
-      } catch (error) {
-        this.snackBar.open('Failed to update transaction', 'Close', { 
-          duration: 3000 
-        });
-      }
+  async save() {
+    if (!this.valid || !this.tx.id) return;
+    this.saving = true;
+    try {
+      const [y, m, d] = this.f.date.split('-').map(Number);
+      await this.db.updateTransaction(this.tx.id, {
+        type: this.f.type,
+        amount: Number(this.f.amount),
+        category: this.f.category,
+        date: new Date(y, m - 1, d).toISOString(),
+        description: this.f.description.trim(),
+      });
+      this.snack.open('Updated', undefined, { duration: 1500 });
+      this.ref.close({ updated: true });
+    } catch {
+      this.snack.open('Update failed', 'OK', { duration: 3000 });
+      this.saving = false;
     }
   }
 
-  async deleteTransaction() {
-    const confirmed = confirm('Are you sure you want to delete this transaction?');
-    if (confirmed && this.data.transaction.id) {
-      try {
-        await this.dexieService.deleteTransaction(this.data.transaction.id);
-        this.snackBar.open('Transaction deleted successfully', 'Close', { 
-          duration: 2000 
-        });
-        this.dialogRef.close({ deleted: true });
-      } catch (error) {
-        this.snackBar.open('Failed to delete transaction', 'Close', { 
-          duration: 3000 
-        });
-      }
+  async remove() {
+    if (!this.tx.id || !confirm('Delete this transaction?')) return;
+    try {
+      await this.db.deleteTransaction(this.tx.id);
+      this.snack.open('Deleted', undefined, { duration: 1500 });
+      this.ref.close({ deleted: true });
+    } catch {
+      this.snack.open('Delete failed', 'OK', { duration: 3000 });
     }
   }
 }

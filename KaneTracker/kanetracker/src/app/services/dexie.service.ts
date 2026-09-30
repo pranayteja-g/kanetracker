@@ -120,8 +120,30 @@ export class DexieService extends Dexie {
       .count();
   }
 
+  /** One pass over transactions: { categoryName: count }. */
+  async getCategoryUsageCounts(): Promise<Record<string, number>> {
+    const counts: Record<string, number> = {};
+    await this.transactions.each(t => { counts[t.category] = (counts[t.category] || 0) + 1; });
+    return counts;
+  }
+
+  /** Updates a category; a rename also renames it on existing transactions (no orphans). */
   async updateCategory(categoryId: number, categoryData: Partial<Category>): Promise<number> {
-    return this.categories.update(categoryId, categoryData);
+    return this.transaction('rw', this.categories, this.transactions, async () => {
+      const current = await this.categories.get(categoryId);
+      if (!current) return 0;
+      const name = categoryData.name?.trim();
+      if (name && name.toLowerCase() !== current.name.toLowerCase()) {
+        const same = await this.getCategoriesByType(current.type);
+        if (same.some(c => c.id !== categoryId && c.name.toLowerCase().trim() === name.toLowerCase())) {
+          throw new Error(`A ${current.type} category named "${name}" already exists`);
+        }
+      }
+      if (name && name !== current.name) {
+        await this.transactions.where('category').equals(current.name).modify({ category: name });
+      }
+      return this.categories.update(categoryId, { ...categoryData, ...(name ? { name } : {}), type: current.type });
+    });
   }
 
   // Fixed search method with proper TypeScript typing
