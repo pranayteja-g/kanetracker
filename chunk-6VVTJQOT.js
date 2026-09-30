@@ -1,1 +1,0 @@
-import{nb as t}from"./chunk-SUDDWDGF.js";var m=new Intl.NumberFormat("en-IN",{maximumFractionDigits:2}),n=class r{transform(e){return"\u20B9"+m.format(e??0)}static \u0275fac=function(i){return new(i||r)};static \u0275pipe=t({name:"inr",type:r,pure:!0})};export{n as a};
