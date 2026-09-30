@@ -1,169 +1,48 @@
-<div class="dashboard-container">
-    <!-- Enhanced Header -->
-    <div class="dashboard-header">
-        <div class="header-content">
-            <h1 class="dashboard-title">
-                <mat-icon class="title-icon">dashboard</mat-icon>
-                Spendify
-            </h1>
-        </div>
+<div class="page" *ngIf="loaded">
+  <header class="top">
+    <h1>Kanetracker</h1>
+    <a routerLink="/categories" class="icon-btn" aria-label="Categories"><mat-icon>label_outline</mat-icon></a>
+  </header>
+
+  <div class="chips" role="tablist">
+    <button *ngFor="let p of periods" class="chip" role="tab" [class.on]="p.v === period"
+      [attr.aria-selected]="p.v === period" (click)="setPeriod(p.v)">{{ p.l }}</button>
+  </div>
+
+  <ng-container *ngIf="hasAny; else empty">
+    <section class="hero">
+      <p class="label">Balance</p>
+      <p class="big" [class.neg]="balance < 0">{{ balance < 0 ? '−' : '' }}{{ (balance < 0 ? -balance : balance) | inr }}</p>
+      <p class="muted" *ngIf="trend">{{ trend }}</p>
+      <div class="split">
+        <div><span class="label">Income</span><b class="inc">{{ income | inr }}</b></div>
+        <div><span class="label">Spent</span><b>{{ expense | inr }}</b></div>
+      </div>
+    </section>
+
+    <section class="sec" *ngIf="top.length">
+      <div class="row-h"><h2>Top spending</h2></div>
+      <div class="cat" *ngFor="let c of top">
+        <div class="cat-h"><span><i [style.background]="c.color"></i>{{ c.name }}</span><b>{{ c.amount | inr }}</b></div>
+        <div class="bar"><div [style.width.%]="c.pct" [style.background]="c.color"></div></div>
+      </div>
+    </section>
+
+    <section class="sec" *ngIf="recent.length">
+      <div class="row-h"><h2>Recent</h2><a routerLink="/transactions">See all</a></div>
+      <div class="tx" *ngFor="let t of recent">
+        <i [style.background]="color(t.category)"></i>
+        <div class="m"><b>{{ t.category }}</b><span>{{ t.description || (t.date | date:'d MMM') }}</span></div>
+        <span class="a" [class.income]="t.type === 'income'">{{ t.type === 'income' ? '+' : '−' }}{{ t.amount | inr }}</span>
+      </div>
+    </section>
+  </ng-container>
+
+  <ng-template #empty>
+    <div class="empty">
+      <mat-icon>savings</mat-icon>
+      <p>No transactions yet</p>
+      <a routerLink="/transaction-form" class="btn">Add first</a>
     </div>
-
-    <!-- Enhanced Balance Card with integrated toggle -->
-    <div class="hero-section">
-        <div class="balance-card glass" [class.positive]="totalBalance >= 0" [class.negative]="totalBalance < 0">
-            <button mat-icon-button class="period-toggle-btn-card" (click)="togglePeriodSelector()"
-                aria-label="Toggle Period Selector">
-                <mat-icon>{{ showPeriodSelector ? 'visibility_off' : 'visibility' }}</mat-icon>
-
-            </button>
-            <!-- Use [class.show] binding to toggle visibility -->
-            <div class="period-selector" [class.show]="showPeriodSelector">
-                <div class="selector-header">
-                    <mat-icon>schedule</mat-icon>
-                    <span>Time Period</span>
-                </div>
-                <div class="period-buttons">
-                    <button *ngFor="let period of availablePeriods" mat-stroked-button
-                        [class.active]="selectedPeriod === period.value" (click)="onPeriodChange(period.value)"
-                        class="period-btn">
-                        <mat-icon>{{ period.icon }}</mat-icon>
-                        <span>{{ period.label }}</span>
-                    </button>
-                </div>
-            </div>
-
-            <div class="balance-background-pattern"></div>
-            <div class="balance-content">
-                <div class="balance-header">
-                    <div class="balance-icon-wrapper">
-                        <mat-icon class="balance-icon">account_balance_wallet</mat-icon>
-                    </div>
-                    <div class="balance-text">
-                        <h3>{{ currentPeriodLabel }} Balance</h3>
-                        <div class="trend-indicator" *ngIf="trendComparison">
-                            <mat-icon class="trend-icon">trending_up</mat-icon>
-                            <span>{{ trendComparison }}</span>
-                        </div>
-                    </div>
-                </div>
-                <p class="balance-amount">₹{{ totalBalance | number:'1.2-2' }}</p>
-
-                <!-- Savings Rate Indicator -->
-                <div class="savings-indicator" *ngIf="totalIncome > 0">
-                    <div class="savings-bar">
-                        <div class="savings-fill" [style.width.%]="getSavingsRate()"></div>
-                    </div>
-                    <span class="savings-text">{{ getSavingsRate() | number:'1.0-0' }}% Savings Rate</span>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Enhanced Stats Grid with Micro-animations -->
-    <div class="stats-section">
-        <div class="stats-grid">
-            <div class="stat-card income glass-card" [attr.data-value]="totalIncome">
-                <div class="stat-background"></div>
-                <div class="stat-content">
-                    <div class="stat-icon-wrapper income">
-                        <mat-icon class="stat-icon">trending_up</mat-icon>
-                    </div>
-                    <div class="stat-info">
-                        <span class="stat-label">Total Income</span>
-                        <span class="stat-value">₹{{ totalIncome | number:'1.2-2' }}</span>
-                    </div>
-                </div>
-                <div class="stat-pulse income-pulse"></div>
-            </div>
-
-            <div class="stat-card expense glass-card" [attr.data-value]="totalExpenses">
-                <div class="stat-background"></div>
-                <div class="stat-content">
-                    <div class="stat-icon-wrapper expense">
-                        <mat-icon class="stat-icon">trending_down</mat-icon>
-                    </div>
-                    <div class="stat-info">
-                        <span class="stat-label">Total Expenses</span>
-                        <span class="stat-value">₹{{ totalExpenses | number:'1.2-2' }}</span>
-                    </div>
-                </div>
-                <div class="stat-pulse expense-pulse"></div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Enhanced Categories Section with Progress Bars -->
-    <div class="categories-section" *ngIf="topCategories.length > 0">
-        <div class="section-header glass-header">
-            <div class="header-left">
-                <mat-icon class="section-icon">donut_large</mat-icon>
-                <h2>Categories</h2>
-            </div>
-            <button mat-icon-button routerLink="/categories" class="view-all-btn">
-                <mat-icon>arrow_forward</mat-icon>
-            </button>
-        </div>
-
-        <div class="categories-grid">
-            <div *ngFor="let category of topCategories; let i = index" class="category-card glass-card"
-                [style.animation-delay.ms]="i * 100">
-                <div class="category-header">
-                    <div class="category-info">
-                        <div class="category-dot-wrapper">
-                            <div class="category-dot" [style.background]="category.color"></div>
-                            <div class="category-glow" [style.background]="category.color"></div>
-                        </div>
-                        <span class="category-name">{{ category.name }}</span>
-                    </div>
-                    <span class="category-amount">₹{{ category.amount | number:'1.0-0' }}</span>
-                </div>
-
-                <div class="category-progress">
-                    <div class="progress-track">
-                        <div class="progress-fill" [style.width.%]="category.percentage"
-                            [style.background]="category.color"></div>
-                    </div>
-                    <span class="progress-text">{{ category.percentage | number:'1.0-0' }}%</span>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Enhanced Recent Transactions with Smooth Animations -->
-    <div class="recent-section" *ngIf="recentTransactions.length > 0">
-        <div class="section-header glass-header">
-            <div class="header-left">
-                <mat-icon class="section-icon">history</mat-icon>
-                <h2>Recent Activity</h2>
-            </div>
-            <button mat-icon-button routerLink="/transactions" class="view-all-btn">
-                <mat-icon>arrow_forward</mat-icon>
-            </button>
-        </div>
-
-        <div class="recent-list glass-card">
-            <div *ngFor="let tx of recentTransactions; let i = index" class="recent-item"
-                [style.animation-delay.ms]="i * 50">
-                <div class="recent-left">
-                    <div class="transaction-icon-wrapper" [class]="tx.type">
-                        <mat-icon class="transaction-icon">
-                            {{ tx.type === 'income' ? 'add_circle' : 'remove_circle' }}
-                        </mat-icon>
-                    </div>
-                    <div class="recent-info">
-                        <span class="recent-category">{{ tx.category }}</span>
-                        <span class="recent-desc">{{ tx.description || 'No description' }}</span>
-                        <span class="recent-date">{{ tx.date | date:'MMM dd' }}</span>
-                    </div>
-                </div>
-                <div class="recent-amount" [class]="tx.type">
-                    <span class="amount-value">{{ tx.type === 'income' ? '+' : '-' }}₹{{ tx.amount | number:'1.2-2'
-                        }}</span>
-                    <div class="amount-indicator" [style.background]="tx.type === 'income' ? '#4CAF50' : '#f44336'">
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+  </ng-template>
 </div>

@@ -1,140 +1,32 @@
-<div class="transactions-container">
-  <!-- Enhanced Header Section -->
-  <div class="page-header glass">
-    <div class="header-content">
-      <div class="title-section">
-        <mat-icon class="page-icon">receipt_long</mat-icon>
-        <div class="title-text">
-          <h1 class="page-title">All Transactions</h1>
-          <p class="page-subtitle">Your complete financial history</p>
-        </div>
-      </div>
-      <div class="header-actions">
-        <button mat-fab color="primary" (click)="navigateToSearch()" matTooltip="Search transactions"
-          class="search-fab">
-          <mat-icon>search</mat-icon>
-        </button>
-      </div>
-    </div>
-  </div>
+<div class="page" *ngIf="loaded">
+  <header class="top">
+    <h1>History</h1>
+    <button class="icon-btn" (click)="search()" aria-label="Search"><mat-icon>search</mat-icon></button>
+  </header>
 
-  <!-- Enhanced Transactions List -->
-  <div class="transactions-section" *ngIf="allTransactions.length; else noData">
-    <div class="section-header glass-header">
-      <div class="header-left">
-        <mat-icon class="section-icon">history</mat-icon>
-        <h2>Recent Activity</h2>
-      </div>
-      <div class="pagination-info">
-        <span class="page-display">
-          Page {{ currentPageNumber }} of {{ totalPages }}
-        </span>
-        <span class="showing-text">
-          Showing {{ startIndex }}-{{ endIndex }} of {{ totalTransactions }} transactions
-        </span>
-      </div>
+  <ng-container *ngIf="hasAny; else empty">
+    <div class="chips">
+      <button *ngFor="let f of filters" class="chip" [class.on]="f.v === filter" (click)="setFilter(f.v)">{{ f.l }}</button>
     </div>
 
-    <div class="transactions-grid">
-      <div *ngFor="let tx of paginatedTransactions; let i = index" class="transaction-item glass-card"
-        [style.background]="hexToRgba(getCategoryColor(tx.category), 0.05)" [style.animation-delay.ms]="i * 50"
-        (click)="openTransactionDetails(tx)">
+    <section class="day" *ngFor="let g of groups">
+      <div class="day-h"><h2>{{ g.label }}</h2><span class="muted" *ngIf="g.spent">−{{ g.spent | inr }}</span></div>
+      <button class="tx" *ngFor="let t of g.items" (click)="open(t)">
+        <i [style.background]="color(t.category)"></i>
+        <span class="m"><b>{{ t.category }}</b><span *ngIf="t.description">{{ t.description }}</span></span>
+        <span class="a" [class.income]="t.type === 'income'">{{ t.type === 'income' ? '+' : '−' }}{{ t.amount | inr }}</span>
+      </button>
+    </section>
 
-        <!-- Transaction Icon -->
-        <div class="transaction-icon-wrapper" [class]="tx.type">
-          <mat-icon class="transaction-icon">
-            {{ tx.type === 'income' ? 'add_circle' : 'remove_circle' }}
-          </mat-icon>
-        </div>
+    <p class="muted none" *ngIf="!groups.length">Nothing here</p>
+    <button class="btn ghost more" *ngIf="hasMore" (click)="more()">Show more</button>
+  </ng-container>
 
-        <!-- Transaction Content -->
-        <div class="transaction-content">
-          <div class="transaction-main">
-            <div class="category-section">
-              <div class="category-dot" [style.background]="getCategoryColor(tx.category)"></div>
-              <span class="category-name">{{ tx.category }}</span>
-            </div>
-            <div class="transaction-amount" [class]="tx.type">
-              <span class="amount-text">
-                {{ tx.type === 'income' ? '+' : '-' }}₹{{ tx.amount | number:'1.2-2' }}
-              </span>
-            </div>
-          </div>
-
-          <div class="transaction-details">
-            <p class="description">{{ tx.description || 'No description' }}</p>
-            <div class="transaction-meta">
-              <span class="date">{{ tx.date | date:'MMM dd, yyyy' }}</span>
-              <mat-icon class="expand-icon">chevron_right</mat-icon>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Fixed Custom Pagination Controls -->
-    <div class="pagination-container">
-      <div class="custom-pagination">
-        <div class="page-size-selector">
-          <label>Items per page:</label>
-          <select (change)="onPageSizeChange($event)" [value]="pageSize" class="page-size-select">
-            <option *ngFor="let size of pageSizeOptions" [value]="size">{{ size }}</option>
-          </select>
-        </div>
-
-        <div class="page-navigation">
-          <button class="nav-btn" [disabled]="currentPage === 0" (click)="currentPage = 0; updatePaginatedData()">
-            <mat-icon>first_page</mat-icon>
-          </button>
-
-          <button class="nav-btn" [disabled]="currentPage === 0"
-            (click)="currentPage = currentPage - 1; updatePaginatedData()">
-            <mat-icon>chevron_left</mat-icon>
-          </button>
-
-          <span class="page-info">
-            Page {{ currentPageNumber }} of {{ totalPages }}
-          </span>
-
-          <button class="nav-btn" [disabled]="currentPage === totalPages - 1"
-            (click)="currentPage = currentPage + 1; updatePaginatedData()">
-            <mat-icon>chevron_right</mat-icon>
-          </button>
-
-          <button class="nav-btn" [disabled]="currentPage === totalPages - 1"
-            (click)="currentPage = totalPages - 1; updatePaginatedData()">
-            <mat-icon>last_page</mat-icon>
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Enhanced Empty State -->
-  <ng-template #noData>
-    <div class="empty-state glass-card">
-      <div class="empty-illustration">
-        <mat-icon class="empty-icon">receipt_long</mat-icon>
-        <div class="empty-rings">
-          <div class="ring ring-1"></div>
-          <div class="ring ring-2"></div>
-          <div class="ring ring-3"></div>
-        </div>
-      </div>
-      <div class="empty-content">
-        <h3>No transactions yet</h3>
-        <p>Your financial journey starts here. Add your first transaction to begin tracking your money.</p>
-        <div class="empty-actions">
-          <button mat-raised-button color="primary" routerLink="/add-transaction">
-            <mat-icon>add</mat-icon>
-            Add Transaction
-          </button>
-          <button mat-stroked-button (click)="navigateToSearch()">
-            <mat-icon>search</mat-icon>
-            Search Transactions
-          </button>
-        </div>
-      </div>
+  <ng-template #empty>
+    <div class="empty">
+      <mat-icon>receipt_long</mat-icon>
+      <p>No transactions yet</p>
+      <a routerLink="/transaction-form" class="btn">Add first</a>
     </div>
   </ng-template>
 </div>

@@ -1,157 +1,111 @@
 import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { MatCardModule } from '@angular/material/card';
+import { NgFor, NgIf } from '@angular/common';
+import { Router, RouterLink } from '@angular/router';
+import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
-import { MatButtonModule } from '@angular/material/button';
-import { MatSnackBar } from '@angular/material/snack-bar';
-import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { DexieService } from '../services/dexie.service';
 import { Transaction } from '../models/transaction.interface';
-import { Category } from '../models/category.interface';
-import { MatDialog } from '@angular/material/dialog';
-import { Router } from '@angular/router';
 import { TransactionDetailDialogComponent } from '../transaction-detail-dialog/transaction-detail-dialog.component';
+import { InrPipe } from '../shared/inr.pipe';
+
+type Filter = 'all' | 'expense' | 'income';
+interface Group { label: string; spent: number; items: Transaction[] }
 
 @Component({
   selector: 'app-transactions',
   standalone: true,
-  imports: [
-    CommonModule,
-    MatCardModule,
-    MatIconModule,
-    MatButtonModule,
-    MatPaginatorModule
-  ],
+  imports: [NgFor, NgIf, RouterLink, MatIconModule, InrPipe],
   templateUrl: './transactions.component.html',
   styleUrls: ['./transactions.component.css'],
 })
 export class TransactionsComponent implements OnInit {
-  allTransactions: Transaction[] = [];
-  paginatedTransactions: Transaction[] = [];
-  categories: Category[] = [];
+  filters: { v: Filter; l: string }[] = [
+    { v: 'all', l: 'All' },
+    { v: 'expense', l: 'Expenses' },
+    { v: 'income', l: 'Income' },
+  ];
+  filter: Filter = 'all';
+  groups: Group[] = [];
+  loaded = false;
+  hasAny = false;
 
-  // Pagination properties
-  pageSize = 20;
-  currentPage = 0;
-  totalTransactions = 0;
-  pageSizeOptions = [10, 20, 50, 100];
+  private all: Transaction[] = [];
+  private view: Transaction[] = [];
+  private colors = new Map<string, string>();
+  private limit = 30;
+  private readonly step = 30;
 
-  constructor(
-    private dexieService: DexieService,
-    private snackBar: MatSnackBar,
-    private dialog: MatDialog,
-    private router: Router
-  ) { }
+  constructor(private db: DexieService, private dialog: MatDialog, private router: Router) {}
 
   async ngOnInit() {
-    await this.loadData();
+    await this.load();
+    this.loaded = true;
   }
 
-  async loadData() {
-    this.allTransactions = await this.dexieService.getAllTransactions();
-    this.categories = await this.dexieService.getAllCategories();
-
-    // Sort transactions by date (latest first)
-    this.allTransactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-    this.totalTransactions = this.allTransactions.length;
-    this.updatePaginatedData();
+  private async load() {
+    const [txs, cats] = await Promise.all([this.db.getTransactionsNewestFirst(), this.db.getAllCategories()]);
+    this.all = txs;
+    this.hasAny = txs.length > 0;
+    cats.forEach(c => this.colors.set(c.name, c.color));
+    this.apply();
   }
 
-  updatePaginatedData() {
-    const startIndex = this.currentPage * this.pageSize;
-    const endIndex = startIndex + this.pageSize;
-    this.paginatedTransactions = this.allTransactions.slice(startIndex, endIndex);
+  get hasMore() {
+    return this.view.length > this.limit;
   }
 
-  onPageChange(event: PageEvent) {
-    this.pageSize = event.pageSize;
-    this.currentPage = event.pageIndex;
-    this.updatePaginatedData();
-
-    // Scroll to top after page change
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+  setFilter(f: Filter) {
+    this.filter = f;
+    this.limit = this.step;
+    this.apply();
   }
 
-  // Fixed method for page size change with proper type casting
-  onPageSizeChange(event: Event) {
-    const target = event.target as HTMLSelectElement;
-    if (target) {
-      this.pageSize = +target.value;
-      this.currentPage = 0;
-      this.updatePaginatedData();
-    }
+  more() {
+    this.limit += this.step;
+    this.build();
   }
 
-  navigateToSearch() {
+  color(name: string) {
+    return this.colors.get(name) || '#d4d4d4';
+  }
+
+  open(tx: Transaction) {
+    this.dialog
+      .open(TransactionDetailDialogComponent, { width: '500px', maxWidth: '95vw', data: { transaction: tx } })
+      .afterClosed()
+      .subscribe(r => (r?.updated || r?.deleted) && this.load());
+  }
+
+  search() {
     this.router.navigate(['/search']);
   }
 
-  getCategoryColor(categoryName: string): string {
-    const category = this.categories.find(c => c.name === categoryName);
-    return category?.color || '#e0e0e0';
+  private apply() {
+    this.view = this.filter === 'all' ? this.all : this.all.filter(t => t.type === this.filter);
+    this.build();
   }
 
-  hexToRgba(hex: string, opacity: number = 0.15): string {
-    const r = parseInt(hex.slice(1, 3), 16);
-    const g = parseInt(hex.slice(3, 5), 16);
-    const b = parseInt(hex.slice(5, 7), 16);
-    return `rgba(${r}, ${g}, ${b}, ${opacity})`;
-  }
-
-  openTransactionDetails(transaction: Transaction) {
-    const dialogRef = this.dialog.open(TransactionDetailDialogComponent, {
-      width: '500px',
-      maxWidth: '90vw',
-      data: { transaction }
-    });
-
-    dialogRef.afterClosed().subscribe(result => {
-      if (result?.updated || result?.deleted) {
-        this.loadData(); // Refresh the transactions list
+  private build() {
+    const today = this.key(new Date());
+    const yest = this.key(new Date(Date.now() - 864e5));
+    const map = new Map<string, Group>();
+    for (const t of this.view.slice(0, this.limit)) {
+      const d = new Date(t.date);
+      const k = this.key(d);
+      let g = map.get(k);
+      if (!g) {
+        const label = k === today ? 'Today' : k === yest ? 'Yesterday'
+          : d.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: d.getFullYear() === new Date().getFullYear() ? undefined : 'numeric' });
+        g = { label, spent: 0, items: [] };
+        map.set(k, g);
       }
-    });
-  }
-
-  async deleteTransaction(id?: number) {
-    if (!id) return;
-    if (confirm('Are you sure you want to delete this transaction?')) {
-      await this.dexieService.deleteTransaction(id);
-      this.snackBar.open('Transaction deleted', 'Close', { duration: 2000 });
-      await this.loadData();
+      g.items.push(t);
+      if (t.type === 'expense') g.spent += t.amount;
     }
+    this.groups = [...map.values()];
   }
 
-  getTotalIncome(): number {
-    return this.allTransactions
-      .filter(tx => tx.type === 'income')
-      .reduce((sum, tx) => sum + tx.amount, 0);
-  }
-
-  getTotalExpenses(): number {
-    return this.allTransactions
-      .filter(tx => tx.type === 'expense')
-      .reduce((sum, tx) => sum + tx.amount, 0);
-  }
-
-  getNetBalance(): number {
-    return this.getTotalIncome() - this.getTotalExpenses();
-  }
-
-  // Custom pagination display methods
-  get currentPageNumber(): number {
-    return this.currentPage + 1;
-  }
-
-  get totalPages(): number {
-    return Math.ceil(this.totalTransactions / this.pageSize);
-  }
-
-  get startIndex(): number {
-    return this.currentPage * this.pageSize + 1;
-  }
-
-  get endIndex(): number {
-    return Math.min((this.currentPage + 1) * this.pageSize, this.totalTransactions);
+  private key(d: Date) {
+    return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
   }
 }

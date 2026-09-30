@@ -23,6 +23,12 @@ export class DexieService extends Dexie {
       });
     });
 
+    // v3: index only what is queried (date/type/category); drop amount/description/color indexes
+    this.version(3).stores({
+      transactions: '++id, date, type, category, [type+date]',
+      categories: '++id, name, type'
+    });
+
     // Initialize tables
     this.transactions = this.table('transactions');
     this.categories = this.table('categories');
@@ -45,6 +51,11 @@ export class DexieService extends Dexie {
 
   getAllTransactions(): Promise<Transaction[]> {
     return this.transactions.toArray();
+  }
+
+  /** Newest first, sorted by the date index (no client-side sort). */
+  getTransactionsNewestFirst(): Promise<Transaction[]> {
+    return this.transactions.orderBy('date').reverse().toArray();
   }
 
   updateTransaction(id: number, transaction: Partial<Transaction>): Promise<number> {

@@ -1,39 +1,33 @@
-// layout.component.ts
 import { Component } from '@angular/core';
-import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
-import { MatButtonModule } from '@angular/material/button';
+import { NgIf } from '@angular/common';
+import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
+import { filter } from 'rxjs';
 
 @Component({
   selector: 'app-layout',
   standalone: true,
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, MatButtonModule, MatIconModule],
+  imports: [NgIf, RouterOutlet, RouterLink, RouterLinkActive, MatIconModule],
   template: `
-    <div class="app-container">
-      <main class="main-content">
-        <router-outlet></router-outlet>
-      </main>
-      <nav class="bottom-nav">
-  <button mat-button routerLink="/dashboard" routerLinkActive="active" class="nav-item">
-    <mat-icon>dashboard</mat-icon>
-    <span>Dashboard</span>
-  </button>
-  <button mat-raised-button color="primary" routerLink="/transaction-form" routerLinkActive="active" class="nav-item add-btn">
-    <mat-icon>add</mat-icon>
-    <span>Add</span>
-  </button>
-  <button mat-button routerLink="/transactions" routerLinkActive="active" class="nav-item">
-    <mat-icon>list</mat-icon>
-    <span>Transactions</span>
-  </button>
-  <button mat-button routerLink="/analytics" routerLinkActive="active" class="nav-item">
-    <mat-icon>analytics</mat-icon>
-    <span>Analytics</span>
-  </button>
-</nav>
-
-    </div>
+    <router-outlet />
+    <nav class="nav" *ngIf="!hideNav" aria-label="Main">
+      <a routerLink="/dashboard" routerLinkActive="on"><mat-icon>home</mat-icon><span>Home</span></a>
+      <a routerLink="/transactions" routerLinkActive="on"><mat-icon>receipt_long</mat-icon><span>History</span></a>
+      <a routerLink="/transaction-form" class="fab" aria-label="Add transaction"><mat-icon>add</mat-icon></a>
+      <a routerLink="/analytics" routerLinkActive="on"><mat-icon>insights</mat-icon><span>Stats</span></a>
+      <a routerLink="/search" routerLinkActive="on"><mat-icon>search</mat-icon><span>Search</span></a>
+    </nav>
   `,
-  styleUrls: ['./layout.component.css']
+  styleUrls: ['./layout.component.css'],
+  host: { '[class.pad]': '!hideNav' }
 })
-export class LayoutComponent { }
+export class LayoutComponent {
+  hideNav = false;
+
+  constructor(router: Router) {
+    this.hideNav = router.url.startsWith('/transaction-form');
+    router.events
+      .pipe(filter((e): e is NavigationEnd => e instanceof NavigationEnd))
+      .subscribe(e => (this.hideNav = e.urlAfterRedirects.startsWith('/transaction-form')));
+  }
+}

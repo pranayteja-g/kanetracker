@@ -243,7 +243,7 @@ export class SearchComponent implements OnInit, OnDestroy {
   }
 
   editTransaction(transaction: Transaction): void {
-    this.router.navigate(['/transactions/edit', transaction.id]);
+    this.router.navigate(['/transactions']);
   }
 
   getTransactionClass(type: string): string {

@@ -1,24 +1,19 @@
 import { Routes } from '@angular/router';
-import { TransactionsComponent } from './transactions/transactions.component';
-import { TransactionFormComponent } from './transaction-form/transaction-form.component';
-import { DashboardComponent } from './dashboard/dashboard.component';
 import { LayoutComponent } from './layout/layout.component';
-import { CategorymanagementComponent } from './categorymanagement/categorymanagement.component';
-import { AnalyticsComponent } from './analytics/analytics.component';
-import { SearchComponent } from './search/search.component';
 
 export const routes: Routes = [
-    {
-        path: '',
-        component: LayoutComponent,
-        children: [
-            { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
-            { path: 'dashboard', component: DashboardComponent },
-            { path: 'transactions', component: TransactionsComponent },
-            { path: 'transaction-form', component: TransactionFormComponent },
-            { path: 'categories', component: CategorymanagementComponent },
-            { path: 'analytics', component: AnalyticsComponent },
-            { path: 'search', component: SearchComponent }
-        ]
-    }
+  {
+    path: '',
+    component: LayoutComponent,
+    children: [
+      { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
+      { path: 'dashboard', loadComponent: () => import('./dashboard/dashboard.component').then(m => m.DashboardComponent) },
+      { path: 'transactions', loadComponent: () => import('./transactions/transactions.component').then(m => m.TransactionsComponent) },
+      { path: 'transaction-form', loadComponent: () => import('./transaction-form/transaction-form.component').then(m => m.TransactionFormComponent) },
+      { path: 'categories', loadComponent: () => import('./categorymanagement/categorymanagement.component').then(m => m.CategorymanagementComponent) },
+      { path: 'analytics', loadComponent: () => import('./analytics/analytics.component').then(m => m.AnalyticsComponent) },
+      { path: 'search', loadComponent: () => import('./search/search.component').then(m => m.SearchComponent) },
+      { path: '**', redirectTo: 'dashboard' }
+    ]
+  }
 ];
