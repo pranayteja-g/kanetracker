@@ -163,7 +163,8 @@ export class DexieService extends Dexie {
       }
 
       if (endDate) {
-        collection = collection.filter((t: Transaction) => new Date(t.date) <= endDate);
+        const endMs = new Date(endDate).setHours(23, 59, 59, 999); // include the whole end day
+        collection = collection.filter((t: Transaction) => new Date(t.date).getTime() <= endMs);
       }
 
       // Amount range filters - Fixed typing

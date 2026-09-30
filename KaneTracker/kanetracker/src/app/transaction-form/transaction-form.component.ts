@@ -1,5 +1,5 @@
 import { AfterViewInit, Component, ElementRef, OnInit, ViewChild, inject } from '@angular/core';
-import { NgFor, NgIf } from '@angular/common';
+import { NgFor } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
@@ -19,7 +19,7 @@ const toInput = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(
 @Component({
   selector: 'app-transaction-form',
   standalone: true,
-  imports: [NgFor, NgIf, ReactiveFormsModule, MatIconModule],
+  imports: [NgFor, ReactiveFormsModule, MatIconModule],
   templateUrl: './transaction-form.component.html',
   styleUrls: ['./transaction-form.component.css'],
 })
