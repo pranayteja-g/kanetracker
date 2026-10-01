@@ -3,3 +3,16 @@
 .day-h { display: flex; justify-content: space-between; align-items: baseline; }
 .none { text-align: center; padding: 48px 0; }
 .more { display: flex; width: 100%; margin-top: 20px; }
+.swipe { position: relative; overflow: hidden; border-bottom: 1px solid var(--k-line); }
+.swipe:last-child { border-bottom: 0; }
+.swipe .tx { border-bottom: 0; background: var(--k-bg); }
+.row-fg { position: relative; display: flex; align-items: center; background: var(--k-bg); }
+.row-fg { touch-action: pan-y; }
+.row-fg .tx { flex: 1; min-width: 0; }
+.bg { position: absolute; top: 0; bottom: 0; width: 50%; display: flex; align-items: center; padding: 0 20px; color: #fff; }
+.bg.l { left: 0; background: #3b82f6; justify-content: flex-start; }
+.bg.r { right: 0; background: #dc2626; justify-content: flex-end; }
+.mini { font-size: 16px; width: 16px; height: 16px; color: var(--k-muted); flex: none; }
+.dup { flex: none; width: 36px; height: 36px; border: 0; background: none; color: var(--k-muted); display: grid; place-items: center; border-radius: 50%; }
+.dup mat-icon { font-size: 18px; width: 18px; height: 18px; }
+.dup:active { background: var(--k-line); }

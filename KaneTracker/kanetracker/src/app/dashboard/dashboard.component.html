@@ -1,13 +1,18 @@
 <div class="page" *ngIf="loaded">
   <header class="top">
     <h1>Kanetracker</h1>
-    <a routerLink="/categories" class="icon-btn" aria-label="Categories"><mat-icon>label_outline</mat-icon></a>
+    <span class="hb">
+      <a routerLink="/summary" class="icon-btn" aria-label="Monthly summary"><mat-icon>calendar_month</mat-icon></a>
+      <a routerLink="/settings" class="icon-btn" aria-label="Settings"><mat-icon>settings</mat-icon></a>
+    </span>
   </header>
 
   <div class="chips" role="tablist">
     <button *ngFor="let p of periods" class="chip" role="tab" [class.on]="p.v === period"
       [attr.aria-selected]="p.v === period" (click)="setPeriod(p.v)">{{ p.l }}</button>
   </div>
+
+  <a routerLink="/settings" class="nudge" *ngIf="staleBackup"><mat-icon>warning_amber</mat-icon>No recent backup. Data lives only in this browser. Tap to back up.</a>
 
   <ng-container *ngIf="hasAny; else empty">
     <section class="hero">
@@ -17,6 +22,15 @@
       <div class="split">
         <div><span class="label">Income</span><b class="inc">{{ income | inr }}</b></div>
         <div><span class="label">Spent</span><b>{{ expense | inr }}</b></div>
+      </div>
+    </section>
+
+    <section class="sec" *ngIf="budgets.length">
+      <div class="row-h"><h2>Budgets · this month</h2><a routerLink="/budgets">Edit</a></div>
+      <div class="cat" *ngFor="let b of budgets">
+        <div class="cat-h"><span><i [style.background]="b.color"></i>{{ b.name }}</span>
+          <b [class.over]="b.over">{{ b.spent | inr }} / {{ b.limit | inr }}</b></div>
+        <div class="bar"><div [style.width.%]="b.pct" [style.background]="b.over ? '#dc2626' : b.pct >= 80 ? '#f59e0b' : b.color"></div></div>
       </div>
     </section>
 

@@ -3,10 +3,12 @@ import { NgFor, NgIf } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { DexieService } from '../services/dexie.service';
 import { Transaction } from '../models/transaction.interface';
 import { TransactionDetailDialogComponent } from '../transaction-detail-dialog/transaction-detail-dialog.component';
 import { InrPipe } from '../shared/inr.pipe';
+import { SwipeRowDirective } from '../shared/swipe-row.directive';
 
 type Filter = 'all' | 'expense' | 'income';
 interface Group { label: string; spent: number; items: Transaction[] }
@@ -14,7 +16,7 @@ interface Group { label: string; spent: number; items: Transaction[] }
 @Component({
   selector: 'app-transactions',
   standalone: true,
-  imports: [NgFor, NgIf, RouterLink, MatIconModule, InrPipe],
+  imports: [NgFor, NgIf, RouterLink, MatIconModule, InrPipe, SwipeRowDirective],
   templateUrl: './transactions.component.html',
   styleUrls: ['./transactions.component.css'],
 })
@@ -35,7 +37,7 @@ export class TransactionsComponent implements OnInit {
   private limit = 30;
   private readonly step = 30;
 
-  constructor(private db: DexieService, private dialog: MatDialog, private router: Router) {}
+  constructor(private db: DexieService, private dialog: MatDialog, private router: Router, private snack: MatSnackBar) {}
 
   async ngOnInit() {
     await this.load();
@@ -69,11 +71,34 @@ export class TransactionsComponent implements OnInit {
     return this.colors.get(name) || '#d4d4d4';
   }
 
-  open(tx: Transaction) {
+  open(tx: Transaction, row?: SwipeRowDirective, edit = false) {
+    if (row?.swiped) return;
     this.dialog
-      .open(TransactionDetailDialogComponent, { width: '500px', maxWidth: '95vw', data: { transaction: tx } })
+      .open(TransactionDetailDialogComponent, { width: '500px', maxWidth: '95vw', data: { transaction: tx, edit } })
       .afterClosed()
-      .subscribe(r => (r?.updated || r?.deleted) && this.load());
+      .subscribe(r => (r?.updated || r?.deleted || r?.duplicated) && this.load());
+  }
+
+  async remove(tx: Transaction) {
+    if (!tx.id) return;
+    const backup = { ...tx };
+    try {
+      await this.db.deleteTransaction(tx.id);
+    } catch {
+      this.snack.open('Delete failed', 'OK', { duration: 3000 });
+      return;
+    }
+    await this.load();
+    this.snack.open('Deleted', 'Undo', { duration: 5000 }).onAction().subscribe(async () => {
+      await this.db.restoreTransaction(backup);
+      this.load();
+    });
+  }
+
+  async dup(tx: Transaction) {
+    await this.db.duplicateTransaction(tx);
+    await this.load();
+    this.snack.open('Duplicated to today', undefined, { duration: 1500 });
   }
 
   search() {

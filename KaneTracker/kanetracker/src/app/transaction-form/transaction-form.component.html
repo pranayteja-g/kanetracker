@@ -9,9 +9,16 @@
   </header>
 
   <div class="amt">
-    <span>₹</span>
+    <select class="cur" formControlName="currency" aria-label="Currency">
+      <option *ngFor="let c of currencies" [value]="c">{{ sym(c) }}</option>
+    </select>
     <input #amount formControlName="amount" type="number" inputmode="decimal" placeholder="0"
       min="0.01" max="10000000" step="0.01" aria-label="Amount" />
+  </div>
+  <p class="conv muted" *ngIf="converted !== null">≈ {{ converted | inr }} at {{ rates[form.controls.currency.value] }}</p>
+
+  <div class="presets">
+    <button type="button" class="chip" *ngFor="let p of presets" (click)="setAmount(p)">{{ p }}</button>
   </div>
 
   <p class="label">Category</p>
@@ -23,10 +30,32 @@
     <button type="button" class="cat add" (click)="addCategory()"><mat-icon>add</mat-icon>New</button>
   </div>
 
+  <p class="label">Account</p>
+  <div class="cats">
+    <button type="button" class="cat" *ngFor="let a of accounts"
+      [class.on]="form.controls.account.value === a" (click)="toggleAccount(a)">{{ a }}</button>
+  </div>
+
   <div class="fields">
     <label><mat-icon>event</mat-icon><input type="date" formControlName="date" [max]="maxDate" aria-label="Date" /></label>
     <label><mat-icon>notes</mat-icon><input type="text" formControlName="description" maxlength="200"
         placeholder="Note (optional)" aria-label="Note" /></label>
+    <label><mat-icon>sell</mat-icon><input type="text" formControlName="tags"
+        placeholder="Tags: trip, work (optional)" aria-label="Tags" autocapitalize="none" /></label>
+    <label><mat-icon>repeat</mat-icon>
+      <select formControlName="repeat" aria-label="Repeat">
+        <option value="none">Does not repeat</option>
+        <option value="daily">Repeats daily</option>
+        <option value="weekly">Repeats weekly</option>
+        <option value="monthly">Repeats monthly</option>
+        <option value="yearly">Repeats yearly</option>
+      </select></label>
+    <label class="file"><mat-icon>photo_camera</mat-icon>
+      <span>{{ receipt ? 'Receipt attached' : 'Attach receipt' }}</span>
+      <img *ngIf="receipt" [src]="receipt" alt="Receipt" />
+      <button type="button" *ngIf="receipt" class="icon-btn" (click)="receipt = ''; $event.preventDefault()" aria-label="Remove receipt"><mat-icon>close</mat-icon></button>
+      <input type="file" accept="image/*" hidden (change)="onFile($event)" />
+    </label>
   </div>
 
   <footer class="cta">

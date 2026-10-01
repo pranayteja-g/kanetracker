@@ -4,10 +4,11 @@ import { FormsModule } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { DexieService } from '../services/dexie.service';
+import { DEFAULT_ACCOUNTS, DexieService } from '../services/dexie.service';
 import { Transaction } from '../models/transaction.interface';
 import { Category } from '../models/category.interface';
 import { InrPipe } from '../shared/inr.pipe';
+import { compressImage, parseTags, round2, symbol } from '../shared/utils';
 
 const pad = (n: number) => String(n).padStart(2, '0');
 const iso = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -29,9 +30,15 @@ const iso = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.ge
           <dt>Category</dt><dd>{{ tx.category }}</dd>
           <dt>Date</dt><dd>{{ tx.date | date:'EEE, d MMM y' }}</dd>
           <dt>Note</dt><dd>{{ tx.description || '—' }}</dd>
+          <ng-container *ngIf="tx.currency"><dt>Original</dt><dd>{{ sym(tx.currency) }}{{ tx.origAmount }} &#64; {{ tx.rate }}</dd></ng-container>
+          <ng-container *ngIf="tx.account"><dt>Account</dt><dd>{{ tx.account }}</dd></ng-container>
+          <ng-container *ngIf="tx.tags?.length"><dt>Tags</dt><dd>#{{ tx.tags!.join(' #') }}</dd></ng-container>
+          <ng-container *ngIf="tx.recurringId"><dt>Repeats</dt><dd>Recurring entry</dd></ng-container>
         </dl>
+        <img class="rcpt" *ngIf="tx.receipt" [src]="tx.receipt" alt="Receipt" (click)="zoom = !zoom" [class.zoom]="zoom" />
         <div class="actions">
           <button class="btn ghost" (click)="startEdit()"><mat-icon>edit</mat-icon>Edit</button>
+          <button class="btn ghost" (click)="dup()"><mat-icon>content_copy</mat-icon>Copy</button>
           <button class="btn ghost del" (click)="remove()"><mat-icon>delete_outline</mat-icon>Delete</button>
         </div>
       </ng-container>
@@ -41,7 +48,7 @@ const iso = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.ge
           <button type="button" [class.on]="f.type === 'expense'" (click)="setType('expense')">Expense</button>
           <button type="button" [class.on]="f.type === 'income'" (click)="setType('income')">Income</button>
         </div>
-        <label><span class="label">Amount ₹</span><input type="number" inputmode="decimal" min="0.01" step="0.01" [(ngModel)]="f.amount" /></label>
+        <label><span class="label">Amount {{ tx.currency ? sym(tx.currency) : '₹' }}</span><input type="number" inputmode="decimal" min="0.01" step="0.01" [(ngModel)]="f.amount" /></label>
         <label><span class="label">Category</span>
           <select [(ngModel)]="f.category">
             <option value="" disabled>Select</option>
@@ -49,6 +56,17 @@ const iso = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.ge
           </select></label>
         <label><span class="label">Date</span><input type="date" [(ngModel)]="f.date" /></label>
         <label><span class="label">Note</span><input type="text" maxlength="200" [(ngModel)]="f.description" /></label>
+        <label><span class="label">Account</span>
+          <select [(ngModel)]="f.account">
+            <option value="">None</option>
+            <option *ngFor="let a of accounts" [value]="a">{{ a }}</option>
+          </select></label>
+        <label><span class="label">Tags</span><input type="text" [(ngModel)]="f.tags" placeholder="trip, work" autocapitalize="none" /></label>
+        <div class="rfield">
+          <img *ngIf="f.receipt" [src]="f.receipt" alt="Receipt" />
+          <label class="btn ghost file"><mat-icon>photo_camera</mat-icon>{{ f.receipt ? 'Change receipt' : 'Attach receipt' }}<input type="file" accept="image/*" hidden (change)="onFile($event)" /></label>
+          <button class="btn ghost" *ngIf="f.receipt" (click)="f.receipt = ''"><mat-icon>close</mat-icon></button>
+        </div>
         <div class="actions">
           <button class="btn ghost" (click)="edit = false">Cancel</button>
           <button class="btn" (click)="save()" [disabled]="!valid || saving">Save</button>
@@ -68,12 +86,17 @@ const iso = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.ge
     dd { margin: 0; word-break: break-word; }
     .actions { display: flex; gap: 8px; }
     .actions .btn { flex: 1; }
-    .del { color: #b91c1c; }
+    .del { color: var(--k-neg); }
+    .rcpt { width: 100%; max-height: 160px; object-fit: cover; border-radius: 12px; cursor: zoom-in; }
+    .rcpt.zoom { max-height: none; object-fit: contain; cursor: zoom-out; }
+    .rfield { display: flex; gap: 8px; align-items: center; }
+    .rfield img { width: 48px; height: 48px; object-fit: cover; border-radius: 8px; }
+    .file { flex: 1; cursor: pointer; flex-direction: row; }
     label { display: flex; flex-direction: column; gap: 4px; }
-    input, select { min-height: 48px; padding: 0 12px; border: 1px solid var(--k-line); border-radius: 12px; background: #fff; font: inherit; font-size: 16px; }
+    input, select { min-height: 48px; padding: 0 12px; border: 1px solid var(--k-line); border-radius: 12px; background: var(--k-surface); color: var(--k-ink); font: inherit; font-size: 16px; }
     .seg { display: flex; padding: 3px; border-radius: 999px; background: var(--k-line); }
     .seg button { flex: 1; border: 0; background: none; padding: 8px; border-radius: 999px; font-size: 14px; color: var(--k-muted); }
-    .seg button.on { background: #fff; color: var(--k-ink); font-weight: 500; box-shadow: 0 1px 3px rgba(0,0,0,.1); }
+    .seg button.on { background: var(--k-surface); color: var(--k-ink); font-weight: 500; box-shadow: 0 1px 3px rgba(0,0,0,.1); }
   `],
 })
 export class TransactionDetailDialogComponent implements OnInit {
@@ -81,12 +104,15 @@ export class TransactionDetailDialogComponent implements OnInit {
   edit = false;
   saving = false;
   cats: Category[] = [];
-  f = { type: 'expense' as 'income' | 'expense', amount: null as number | null, category: '', date: '', description: '' };
+  f = { type: 'expense' as 'income' | 'expense', amount: null as number | null, category: '', date: '', description: '', account: '', tags: '', receipt: '' };
+  accounts: string[] = [];
+  zoom = false;
+  sym = symbol;
   private all: Category[] = [];
 
   constructor(
     private ref: MatDialogRef<TransactionDetailDialogComponent>,
-    @Inject(MAT_DIALOG_DATA) data: { transaction: Transaction },
+    @Inject(MAT_DIALOG_DATA) private data: { transaction: Transaction; edit?: boolean },
     private db: DexieService,
     private snack: MatSnackBar
   ) {
@@ -95,6 +121,8 @@ export class TransactionDetailDialogComponent implements OnInit {
 
   async ngOnInit() {
     this.all = await this.db.getAllCategories();
+    this.accounts = await this.db.getSetting('accounts', DEFAULT_ACCOUNTS);
+    if (this.data.edit) this.startEdit();
   }
 
   get valid() {
@@ -103,7 +131,11 @@ export class TransactionDetailDialogComponent implements OnInit {
 
   startEdit() {
     const t = this.tx;
-    this.f = { type: t.type, amount: t.amount, category: t.category, date: iso(new Date(t.date)), description: t.description || '' };
+    this.f = {
+      type: t.type, amount: t.currency ? t.origAmount ?? t.amount : t.amount, category: t.category,
+      date: iso(new Date(t.date)), description: t.description || '', account: t.account || '',
+      tags: (t.tags || []).join(', '), receipt: t.receipt || '',
+    };
     this.cats = this.all.filter(c => c.type === t.type);
     this.edit = true;
   }
@@ -120,18 +152,42 @@ export class TransactionDetailDialogComponent implements OnInit {
     this.saving = true;
     try {
       const [y, m, d] = this.f.date.split('-').map(Number);
-      await this.db.updateTransaction(this.tx.id, {
-        type: this.f.type,
-        amount: Number(this.f.amount),
-        category: this.f.category,
-        date: new Date(y, m - 1, d).toISOString(),
-        description: this.f.description.trim(),
+      const entered = Number(this.f.amount);
+      const tags = parseTags(this.f.tags);
+      await this.db.transactions.where(':id').equals(this.tx.id).modify((row: Transaction) => {
+        row.type = this.f.type;
+        row.category = this.f.category;
+        row.date = new Date(y, m - 1, d).toISOString();
+        row.description = this.f.description.trim();
+        if (row.currency && row.rate) { row.origAmount = entered; row.amount = round2(entered * row.rate); }
+        else row.amount = entered;
+        this.f.account ? (row.account = this.f.account) : delete row.account;
+        tags.length ? (row.tags = tags) : delete row.tags;
+        this.f.receipt ? (row.receipt = this.f.receipt) : delete row.receipt;
       });
       this.snack.open('Updated', undefined, { duration: 1500 });
       this.ref.close({ updated: true });
     } catch {
       this.snack.open('Update failed', 'OK', { duration: 3000 });
       this.saving = false;
+    }
+  }
+
+  async onFile(ev: Event) {
+    const input = ev.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (!file) return;
+    try { this.f.receipt = await compressImage(file); } catch { this.snack.open('Could not read image', 'OK', { duration: 3000 }); }
+  }
+
+  async dup() {
+    try {
+      await this.db.duplicateTransaction(this.tx);
+      this.snack.open('Duplicated to today', undefined, { duration: 1500 });
+      this.ref.close({ duplicated: true });
+    } catch {
+      this.snack.open('Copy failed', 'OK', { duration: 3000 });
     }
   }
 

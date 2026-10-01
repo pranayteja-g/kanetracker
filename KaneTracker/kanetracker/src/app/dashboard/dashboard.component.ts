@@ -8,6 +8,7 @@ import { InrPipe } from '../shared/inr.pipe';
 
 type Period = 'month' | 'last' | '3m' | 'year' | 'all';
 interface Tx extends Transaction { t: number }
+interface BudgetRow { name: string; spent: number; limit: number; pct: number; color: string; over: boolean }
 interface TopCat { name: string; amount: number; color: string; pct: number }
 
 @Component({
@@ -35,6 +36,8 @@ export class DashboardComponent implements OnInit {
   trend = '';
   top: TopCat[] = [];
   recent: Tx[] = [];
+  budgets: BudgetRow[] = [];
+  staleBackup = false;
 
   private all: Tx[] = [];            // newest first
   private colors = new Map<string, string>();
@@ -42,12 +45,28 @@ export class DashboardComponent implements OnInit {
   constructor(private db: DexieService) {}
 
   async ngOnInit() {
-    const [txs, cats] = await Promise.all([this.db.getTransactionsNewestFirst(), this.db.getAllCategories()]);
+    const [txs, cats, buds, lb] = await Promise.all([
+      this.db.getTransactionsNewestFirst(), this.db.getAllCategories(), this.db.budgets.toArray(),
+      this.db.getSetting<string>('lastBackup', ''),
+    ]);
     this.all = txs.map(t => ({ ...t, t: new Date(t.date).getTime() }));
     cats.forEach(c => this.colors.set(c.name, c.color));
     this.hasAny = this.all.length > 0;
+    this.staleBackup = this.all.length >= 10 && (!lb || Date.now() - new Date(lb).getTime() > 30 * 864e5);
+    this.budgets = this.buildBudgets(buds);
     this.compute();
     this.loaded = true;
+  }
+
+  private buildBudgets(buds: { category: string; limit: number }[]): BudgetRow[] {
+    if (!buds.length) return [];
+    const [from, to] = this.range('month');
+    const spent = new Map<string, number>();
+    for (const t of this.all) if (t.type === 'expense' && t.t >= from && t.t <= to) spent.set(t.category, (spent.get(t.category) || 0) + t.amount);
+    return buds.map(b => {
+      const s = spent.get(b.category) || 0;
+      return { name: b.category, spent: s, limit: b.limit, pct: Math.min(100, (s / b.limit) * 100), color: this.color(b.category), over: s > b.limit };
+    }).sort((a, b) => b.spent / b.limit - a.spent / a.limit);
   }
 
   setPeriod(p: Period) {

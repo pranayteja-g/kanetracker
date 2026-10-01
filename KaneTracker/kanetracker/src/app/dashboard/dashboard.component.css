@@ -1,7 +1,7 @@
 .chips { margin-top: 4px; }
 .hero { padding: 28px 0 8px; }
 .big { font-size: 44px; font-weight: 600; letter-spacing: -.03em; line-height: 1.1; margin: 4px 0; font-variant-numeric: tabular-nums; }
-.big.neg { color: #b91c1c; }
+.big.neg { color: var(--k-neg); }
 .split { display: flex; gap: 32px; margin-top: 20px; }
 .split div { display: flex; flex-direction: column; gap: 2px; }
 .split b { font-size: 18px; font-weight: 500; font-variant-numeric: tabular-nums; }
@@ -12,3 +12,8 @@
 .cat-h b { font-weight: 500; font-variant-numeric: tabular-nums; }
 .bar { height: 4px; background: var(--k-line); border-radius: 2px; overflow: hidden; }
 .bar div { height: 100%; border-radius: 2px; }
+
+.hb { display: flex; }
+.cat-h b.over { color: var(--k-neg); }
+.nudge { display: flex; align-items: center; gap: 8px; margin-top: 12px; padding: 10px 12px; border-radius: var(--k-r); background: var(--k-warn-bg); color: var(--k-warn); font-size: 13px; }
+.nudge mat-icon { flex: none; font-size: 20px; width: 20px; height: 20px; }

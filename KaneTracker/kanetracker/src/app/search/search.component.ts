@@ -76,7 +76,7 @@ export class SearchComponent implements OnInit, OnDestroy {
     const [txs, cats] = await Promise.all([this.db.getAllTransactions(), this.db.getAllCategories()]);
     this.categories = cats;
     cats.forEach(c => this.colors.set(c.name, c.color));
-    this.items = txs.map(tx => ({ tx, t: new Date(tx.date).getTime(), text: `${tx.description} ${tx.category}`.toLowerCase() }));
+    this.items = txs.map(tx => ({ tx, t: new Date(tx.date).getTime(), text: `${tx.description} ${tx.category} ${tx.account || ""} ${(tx.tags || []).join(" ")}`.toLowerCase() }));
     this.run();
   }
 

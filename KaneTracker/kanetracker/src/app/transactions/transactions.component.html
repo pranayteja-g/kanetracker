@@ -11,11 +11,21 @@
 
     <section class="day" *ngFor="let g of groups">
       <div class="day-h"><h2>{{ g.label }}</h2><span class="muted" *ngIf="g.spent">−{{ g.spent | inr }}</span></div>
-      <button class="tx" *ngFor="let t of g.items" (click)="open(t)">
-        <i [style.background]="color(t.category)"></i>
-        <span class="m"><b>{{ t.category }}</b><span *ngIf="t.description">{{ t.description }}</span></span>
-        <span class="a" [class.income]="t.type === 'income'">{{ t.type === 'income' ? '+' : '−' }}{{ t.amount | inr }}</span>
-      </button>
+      <div class="swipe" *ngFor="let t of g.items">
+        <div class="bg l"><mat-icon>edit</mat-icon></div>
+        <div class="bg r"><mat-icon>delete_outline</mat-icon></div>
+        <div class="row-fg" kSwipe #sw="kSwipe" (swipeLeft)="remove(t)" (swipeRight)="open(t, sw, true)">
+          <button class="tx" (click)="open(t, sw)">
+            <i [style.background]="color(t.category)"></i>
+            <span class="m"><b>{{ t.category }}</b>
+              <span *ngIf="t.description || t.account || t.tags?.length">{{ t.description }}<ng-container *ngIf="t.account"> · {{ t.account }}</ng-container><ng-container *ngFor="let tg of t.tags"> #{{ tg }}</ng-container></span></span>
+            <mat-icon class="mini" *ngIf="t.receipt">photo_camera</mat-icon>
+            <mat-icon class="mini" *ngIf="t.recurringId">repeat</mat-icon>
+            <span class="a" [class.income]="t.type === 'income'">{{ t.type === 'income' ? '+' : '−' }}{{ t.amount | inr }}</span>
+          </button>
+          <button class="dup" (click)="dup(t)" aria-label="Duplicate"><mat-icon>content_copy</mat-icon></button>
+        </div>
+      </div>
     </section>
 
     <p class="muted none" *ngIf="!groups.length">Nothing here</p>
