@@ -10,23 +10,25 @@ permissions:
 concurrency:
   group: pages
   cancel-in-progress: true
-env:
-  APP: kanetracker
 jobs:
   build:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: ${{ env.APP }}
+        working-directory: KaneTracker/kanetracker
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with: { node-version: 20 }
-      - run: npm install
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: KaneTracker/kanetracker/package-lock.json
+      - run: npm ci
       - run: npx ng build
       - run: cp dist/kanetracker/browser/index.html dist/kanetracker/browser/404.html
       - uses: actions/upload-pages-artifact@v3
-        with: { path: "${{ env.APP }}/dist/kanetracker/browser" }
+        with:
+          path: KaneTracker/kanetracker/dist/kanetracker/browser
   deploy:
     needs: build
     runs-on: ubuntu-latest
