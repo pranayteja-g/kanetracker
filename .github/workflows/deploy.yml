@@ -16,8 +16,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with: { node-version: 20, cache: npm }
-      - run: npm ci
+        with: { node-version: 20 }
+      - run: npm install
       - run: npx ng build
       - run: cp dist/kanetracker/browser/index.html dist/kanetracker/browser/404.html
       - uses: actions/upload-pages-artifact@v3
