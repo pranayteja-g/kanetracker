@@ -17,7 +17,6 @@
 .cat-h b.over { color: var(--k-neg); }
 .nudge { display: flex; align-items: center; gap: 8px; margin-top: 12px; padding: 10px 12px; border-radius: var(--k-r); background: var(--k-warn-bg); color: var(--k-warn); font-size: 13px; }
 .nudge mat-icon { flex: none; font-size: 20px; width: 20px; height: 20px; }
-<<<<<<< HEAD
 
 .ins { display: flex; gap: 10px; align-items: flex-start; margin: 8px 0; font-size: 14px; line-height: 1.4; }
 .ins mat-icon { flex: none; font-size: 18px; width: 18px; height: 18px; margin-top: 1px; color: var(--k-muted); }
@@ -26,5 +25,3 @@
 .sug .m { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .sug .m b { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sug .m span { font-size: 13px; color: var(--k-muted); }
-=======
->>>>>>> 91f1ab019d2cec63a236787506d3f298a3addd58

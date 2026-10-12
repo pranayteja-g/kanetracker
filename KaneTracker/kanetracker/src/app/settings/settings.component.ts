@@ -4,12 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar } from '@angular/material/snack-bar';
-<<<<<<< HEAD
 import { DEFAULT_ACCOUNTS, DexieService } from '../services/dexie.service';
 import { CURRENCIES, currencyName, fmtMoney, getBase, symbol } from '../shared/currency';
-=======
-import { DEFAULT_ACCOUNTS, DEFAULT_RATES, DexieService } from '../services/dexie.service';
->>>>>>> 91f1ab019d2cec63a236787506d3f298a3addd58
 import { LockService } from '../lock/lock.service';
 import { download, toCsv, toInput } from '../shared/utils';
 
@@ -44,7 +40,6 @@ import { download, toCsv, toInput } from '../shared/utils';
       </section>
 
       <section class="sec">
-<<<<<<< HEAD
         <div class="row-h"><h2>Main currency</h2></div>
         <p class="muted">Now: <b>{{ base }} ({{ sym(base) }})</b> · {{ name(base) }}</p>
         <select class="sel" [(ngModel)]="target" (ngModelChange)="onTarget()" aria-label="Main currency">
@@ -77,10 +72,6 @@ import { download, toCsv, toInput } from '../shared/utils';
       <section class="sec">
         <div class="row-h"><h2>Other currencies</h2></div>
         <p class="muted">Rate = {{ base }} per 1 unit. Entries in another currency are saved in {{ base }} at the rate used when added.</p>
-=======
-        <div class="row-h"><h2>Currencies</h2></div>
-        <p class="muted">Rate = ₹ per 1 unit. Amounts are stored in ₹ at the rate used when added.</p>
->>>>>>> 91f1ab019d2cec63a236787506d3f298a3addd58
         <div class="rate" *ngFor="let c of rateKeys"><b>{{ c }}</b><input type="number" inputmode="decimal" min="0" step="0.01" [(ngModel)]="rates[c]" (change)="saveRates()" />
           <button class="icon-btn" (click)="delRate(c)" aria-label="Remove"><mat-icon>close</mat-icon></button></div>
         <div class="rate"><input class="code" placeholder="Code e.g. CAD" maxlength="3" [(ngModel)]="newCode" />
@@ -123,15 +114,11 @@ import { download, toCsv, toInput } from '../shared/utils';
     .btn { cursor: pointer; } .del { color: #dc2626; }
     .warn { color: #b45309; }
     .rate { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
-<<<<<<< HEAD
     .rate b { min-width: 48px; }
     .sel { width: 100%; min-height: 44px; padding: 0 12px; border: 1px solid var(--k-line); border-radius: 12px; background: var(--k-surface); color: var(--k-ink); font: inherit; font-size: 16px; margin-top: 8px; }
     .conv { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
     .opt { display: flex; gap: 10px; align-items: flex-start; padding: 10px 0; }
     .opt input { margin-top: 4px; width: 18px; height: 18px; }
-=======
-    .rate b { width: 48px; }
->>>>>>> 91f1ab019d2cec63a236787506d3f298a3addd58
     .rate input { flex: 1; min-width: 0; min-height: 44px; padding: 0 12px; border: 1px solid var(--k-line); border-radius: 12px; background: var(--k-surface); color: var(--k-ink); font: inherit; font-size: 16px; }
     .rate .code { text-transform: uppercase; }
     .tagrow { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -145,7 +132,6 @@ export class SettingsComponent implements OnInit {
   lock = inject(LockService);
 
   loaded = false;
-<<<<<<< HEAD
   base = getBase();
   target = getBase();
   currencies = CURRENCIES;
@@ -160,8 +146,6 @@ export class SettingsComponent implements OnInit {
   sym = symbol;
   name = currencyName;
   fmt = (n: number, c: string) => fmtMoney(n, c);
-=======
->>>>>>> 91f1ab019d2cec63a236787506d3f298a3addd58
   rates: Record<string, number> = {};
   accounts: string[] = [];
   lastBackup = '';
@@ -171,14 +155,10 @@ export class SettingsComponent implements OnInit {
   get rateKeys() { return Object.keys(this.rates); }
 
   async ngOnInit() {
-<<<<<<< HEAD
     this.rates = await this.db.getRates();
     this.base = getBase();
     this.target = this.base;
     this.txCount = await this.db.transactions.count();
-=======
-    this.rates = await this.db.getSetting('rates', { ...DEFAULT_RATES });
->>>>>>> 91f1ab019d2cec63a236787506d3f298a3addd58
     this.accounts = await this.db.getSetting('accounts', [...DEFAULT_ACCOUNTS]);
     const lb = await this.db.getSetting<string>('lastBackup', '');
     this.lastBackup = lb ? new Date(lb).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
@@ -186,7 +166,6 @@ export class SettingsComponent implements OnInit {
     this.loaded = true;
   }
 
-<<<<<<< HEAD
   onTarget() {
     this.convRate = 0;
     this.rateInfo = '';
@@ -235,8 +214,6 @@ export class SettingsComponent implements OnInit {
     this.busy = false;
   }
 
-=======
->>>>>>> 91f1ab019d2cec63a236787506d3f298a3addd58
   back() { history.length > 1 ? history.back() : this.router.navigate(['/dashboard']); }
   private toast(m: string) { this.snack.open(m, 'OK', { duration: 4000 }); }
 
@@ -285,11 +262,7 @@ export class SettingsComponent implements OnInit {
   async delRate(c: string) { delete this.rates[c]; await this.saveRates(); }
   async addRate() {
     const c = this.newCode.trim().toUpperCase();
-<<<<<<< HEAD
     if (!/^[A-Z]{3}$/.test(c) || c === this.base || !(Number(this.newRate) > 0)) return this.toast('Enter 3-letter code and rate');
-=======
-    if (!/^[A-Z]{3}$/.test(c) || c === 'INR' || !(Number(this.newRate) > 0)) return this.toast('Enter 3-letter code and rate');
->>>>>>> 91f1ab019d2cec63a236787506d3f298a3addd58
     this.rates[c] = Number(this.newRate);
     this.newCode = ''; this.newRate = null;
     await this.saveRates();
