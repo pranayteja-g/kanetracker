@@ -44,6 +44,7 @@ export function parseStatementCsv(text: string): ParsedRow[] {
   const find = (...re: RegExp[]) => head.findIndex(h => re.some(r => r.test(h)));
   const iDate = find(/^date$/, /txn.*date|trans.*date|value date|posting/, /date/);
   const iDesc = find(/desc|narration|particular|remark|details|note/);
+<<<<<<< HEAD
   // "Credit/debit instrument" (masked card/account no.) must never be read as an amount or a type
   const notInstr = (h: string) => !/instrument|mode|card|a\/c|account/.test(h);
   const findAmt = (...re: RegExp[]) => head.findIndex(h => notInstr(h) && re.some(r => r.test(h)));
@@ -52,6 +53,12 @@ export function parseStatementCsv(text: string): ParsedRow[] {
   // separate debit/credit columns only when there is no single Amount column
   const iDr = iAmt >= 0 ? -1 : findAmt(/debit|withdraw|^dr\b|paid out/);
   const iCr = iAmt >= 0 ? -1 : findAmt(/credit|deposit|^cr\b|paid in/);
+=======
+  const iDr = find(/debit|withdraw|^dr\b|paid out/);
+  const iCr = find(/credit|deposit|^cr\b|paid in/);
+  const iAmt = find(/^amount|^amt/);
+  const iType = find(/^type$|dr\/cr|cr\/dr/);
+>>>>>>> 91f1ab019d2cec63a236787506d3f298a3addd58
   const iCat = find(/^category$/);
   const iAcc = find(/^account$/);
   const iTags = find(/^tags?$/);
@@ -86,12 +93,17 @@ export function parseStatementCsv(text: string): ParsedRow[] {
   return out;
 }
 
+<<<<<<< HEAD
 const escRe = (x: string) => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 /** `extra` = currency markers to accept besides INR/Rs/₹, e.g. ['CNY','¥'] for a yuan base. */
 export function parseSms(text: string, extra: string[] = []): ParsedRow[] {
   const markers = ['INR', 'Rs\\.?', '₹', ...extra.filter(Boolean).map(escRe)].join('|');
   const AMT = new RegExp(`(?:${markers})\\s?([\\d,]+(?:\\.\\d{1,2})?)`, 'i');
+=======
+export function parseSms(text: string): ParsedRow[] {
+  const AMT = /(?:INR|Rs\.?|₹)\s?([\d,]+(?:\.\d{1,2})?)/i;
+>>>>>>> 91f1ab019d2cec63a236787506d3f298a3addd58
   let msgs = text.split(/\n\s*\n/).map(s => s.trim()).filter(Boolean);
   if (msgs.length === 1) {
     const lines = msgs[0].split('\n').filter(l => AMT.test(l));

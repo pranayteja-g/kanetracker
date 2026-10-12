@@ -4,7 +4,10 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { DexieService } from '../services/dexie.service';
+<<<<<<< HEAD
 import { getBase, symbol } from '../shared/currency';
+=======
+>>>>>>> 91f1ab019d2cec63a236787506d3f298a3addd58
 
 @Component({
   selector: 'app-budgets',
@@ -19,7 +22,11 @@ import { getBase, symbol } from '../shared/currency';
       <p class="muted">Monthly limit per expense category. Leave blank for none.</p>
       <div class="row" *ngFor="let c of cats">
         <span class="nm"><i [style.background]="c.color"></i>{{ c.name }}</span>
+<<<<<<< HEAD
         <span class="r">{{ cur }}</span>
+=======
+        <span class="r">₹</span>
+>>>>>>> 91f1ab019d2cec63a236787506d3f298a3addd58
         <input type="number" inputmode="decimal" min="0" placeholder="No limit" [(ngModel)]="limits[c.name]" (change)="save(c.name)" [attr.aria-label]="c.name + ' limit'" />
       </div>
       <div class="empty" *ngIf="!cats.length"><p>No expense categories</p></div>
@@ -34,7 +41,10 @@ import { getBase, symbol } from '../shared/currency';
   `],
 })
 export class BudgetsComponent implements OnInit {
+<<<<<<< HEAD
   cur = symbol(getBase());
+=======
+>>>>>>> 91f1ab019d2cec63a236787506d3f298a3addd58
   private db = inject(DexieService);
   private router = inject(Router);
   cats: { name: string; color: string }[] = [];

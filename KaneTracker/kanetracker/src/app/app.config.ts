@@ -13,7 +13,10 @@ export const appConfig: ApplicationConfig = {
       provide: APP_INITIALIZER, multi: true, deps: [DexieService, LockService],
       useFactory: (db: DexieService, lock: LockService) => async () => {
         // Lock state first, so the PIN screen never flashes (or is skipped) on load.
+<<<<<<< HEAD
         try { db.currencyGuessed = (await db.loadBase()).guessed; } catch (e) { console.error('Currency init failed', e); }
+=======
+>>>>>>> 91f1ab019d2cec63a236787506d3f298a3addd58
         try { await lock.init(); } catch (e) { console.error('Lock init failed', e); }
         try { db.recurringAdded = await db.processRecurring(); } catch (e) { console.error('Recurring failed', e); }
       },

@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import Dexie, { Table } from 'dexie';
 import { Transaction } from '../models/transaction.interface';
 import { Category } from '../models/category.interface';
+<<<<<<< HEAD
 import { Recurring } from '../models/recurring.interface';
 import { advance } from '../shared/utils';
 import { Budget } from '../models/budget.interface';
@@ -10,11 +11,28 @@ import { getBase, guessCurrency, isKnown, setBase } from '../shared/currency';
 /** Never exported/imported: lock secrets. */
 const round2 = (n: number) => Math.round(n * 100) / 100;
 const sig = (n: number) => Number(n.toPrecision(6));
+=======
+import { Recurring, Freq } from '../models/recurring.interface';
+import { Budget } from '../models/budget.interface';
+
+/** Never exported/imported: lock secrets. */
+>>>>>>> 91f1ab019d2cec63a236787506d3f298a3addd58
 const SECRET_KEYS = new Set(['pinHash', 'pinSalt', 'bioId', 'lockEnabled']);
 export const DEFAULT_RATES: Record<string, number> = { USD: 88, EUR: 102, GBP: 118, AED: 24, SGD: 68, JPY: 0.6 };
 export const DEFAULT_ACCOUNTS = ['Cash', 'UPI', 'Card'];
 
+<<<<<<< HEAD
 export { advance };
+=======
+export function advance(d: Date, freq: Freq, dom: number): Date {
+  const y = d.getFullYear(), m = d.getMonth();
+  if (freq === 'daily') return new Date(y, m, d.getDate() + 1);
+  if (freq === 'weekly') return new Date(y, m, d.getDate() + 7);
+  const [ny, nm] = freq === 'monthly' ? [y, m + 1] : [y + 1, m];
+  const dim = new Date(ny, nm + 1, 0).getDate();
+  return new Date(ny, nm, Math.min(dom, dim));
+}
+>>>>>>> 91f1ab019d2cec63a236787506d3f298a3addd58
 
 @Injectable({
   providedIn: 'root'
@@ -27,7 +45,10 @@ export class DexieService extends Dexie {
   settings!: Table<{ key: string; value: any }, string>;
   /** Set at startup by APP_INITIALIZER. */
   recurringAdded = 0;
+<<<<<<< HEAD
   currencyGuessed = false;
+=======
+>>>>>>> 91f1ab019d2cec63a236787506d3f298a3addd58
 
   constructor() {
     super('KaneTrackerDB');
@@ -354,6 +375,7 @@ export class DexieService extends Dexie {
     });
   }
 
+<<<<<<< HEAD
   // ---------- base currency ----------
   /** Reads the saved base currency into the shared module. Empty new installs get a locale-based default. */
   async loadBase(): Promise<{ code: string; guessed: boolean }> {
@@ -426,6 +448,8 @@ export class DexieService extends Dexie {
     return { converted };
   }
 
+=======
+>>>>>>> 91f1ab019d2cec63a236787506d3f298a3addd58
   // ---------- backup / restore ----------
   async exportAll() {
     const [transactions, categories, recurring, budgets, settings] = await Promise.all([
@@ -460,10 +484,14 @@ export class DexieService extends Dexie {
       await this.recurring.bulkPut(rec);
       await this.budgets.bulkPut(bud);
       await this.settings.bulkPut(set);
+<<<<<<< HEAD
       // Old backups predate the base-currency setting: their amounts are INR.
       if (!set.some((x: any) => x.key === 'baseCurrency')) await this.settings.put({ key: 'baseCurrency', value: 'INR' });
     });
     await this.loadBase();
+=======
+    });
+>>>>>>> 91f1ab019d2cec63a236787506d3f298a3addd58
     return { transactions: txs.length, categories: cats.length };
   }
 }

@@ -7,12 +7,20 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { DexieService } from '../services/dexie.service';
 import { Category } from '../models/category.interface';
 import { Transaction } from '../models/transaction.interface';
+<<<<<<< HEAD
 import { buildClassifier } from '../shared/categorize';
 import { ParsedRow, parseSms, parseStatementCsv } from '../shared/import-parse';
 import { InrPipe } from '../shared/inr.pipe';
 import { getBase, symbol } from '../shared/currency';
 
 interface Row extends ParsedRow { on: boolean; dup: boolean; cat: string; sure: boolean }
+=======
+import { buildCategorizer } from '../shared/categorize';
+import { ParsedRow, parseSms, parseStatementCsv } from '../shared/import-parse';
+import { InrPipe } from '../shared/inr.pipe';
+
+interface Row extends ParsedRow { on: boolean; dup: boolean; cat: string }
+>>>>>>> 91f1ab019d2cec63a236787506d3f298a3addd58
 
 const PALETTE = ['#6366f1', '#14b8a6', '#f59e0b', '#ec4899', '#3b82f6', '#84cc16'];
 
@@ -48,7 +56,11 @@ const PALETTE = ['#6366f1', '#14b8a6', '#f59e0b', '#ec4899', '#3b82f6', '#84cc16
           <input type="checkbox" [(ngModel)]="r.on" aria-label="Include" />
           <div class="m">
             <b>{{ r.desc || '(no description)' }}</b>
+<<<<<<< HEAD
             <span>{{ r.date | date:'d MMM y' }}<span *ngIf="r.dup" class="dup"> · duplicate?</span><span *ngIf="!r.sure && r.cat" class="dup"> · guess</span></span>
+=======
+            <span>{{ r.date | date:'d MMM y' }}<span *ngIf="r.dup" class="dup"> · duplicate?</span></span>
+>>>>>>> 91f1ab019d2cec63a236787506d3f298a3addd58
             <select [(ngModel)]="r.cat" [attr.aria-label]="'Category for ' + r.desc">
               <option value="">Pick category</option>
               <option *ngFor="let c of catsFor(r.type)" [value]="c.name">{{ c.name }}</option>
@@ -96,7 +108,11 @@ export class ImportComponent implements OnInit {
   busy = false;
   private cats: Category[] = [];
   private existing = new Set<string>();
+<<<<<<< HEAD
   private clf!: ReturnType<typeof buildClassifier>;
+=======
+  private guess!: (d: string, t: 'income' | 'expense') => string;
+>>>>>>> 91f1ab019d2cec63a236787506d3f298a3addd58
 
   get selected() { return this.rows.filter(r => r.on).length; }
   get dups() { return this.rows.filter(r => r.dup).length; }
@@ -105,7 +121,11 @@ export class ImportComponent implements OnInit {
   async ngOnInit() {
     const [cats, txs] = await Promise.all([this.db.getAllCategories(), this.db.getAllTransactions()]);
     this.cats = cats;
+<<<<<<< HEAD
     this.clf = buildClassifier(txs, cats);
+=======
+    this.guess = buildCategorizer(txs, cats);
+>>>>>>> 91f1ab019d2cec63a236787506d3f298a3addd58
     txs.forEach(t => this.existing.add(this.key(new Date(t.date), t.amount, t.type)));
   }
 
@@ -127,7 +147,11 @@ export class ImportComponent implements OnInit {
 
   parse() {
     this.err = '';
+<<<<<<< HEAD
     const parsed = this.mode === 'csv' ? parseStatementCsv(this.text) : parseSms(this.text, [getBase(), symbol(getBase())]);
+=======
+    const parsed = this.mode === 'csv' ? parseStatementCsv(this.text) : parseSms(this.text);
+>>>>>>> 91f1ab019d2cec63a236787506d3f298a3addd58
     if (!parsed.length) {
       this.err = this.mode === 'csv' ? 'No rows found. Need a header with Date + Amount (or Debit/Credit).' : 'No amounts found in text.';
       return;
@@ -137,8 +161,12 @@ export class ImportComponent implements OnInit {
       const k = this.key(p.date, p.amount, p.type);
       const dup = this.existing.has(k);
       seen.add(k);
+<<<<<<< HEAD
       const s = this.clf.suggest(p.desc, p.type);
       return { ...p, dup, on: !dup, cat: p.category || s.category, sure: !!p.category || s.conf >= 0.6 };
+=======
+      return { ...p, dup, on: !dup, cat: p.category || this.guess(p.desc, p.type) };
+>>>>>>> 91f1ab019d2cec63a236787506d3f298a3addd58
     });
   }
 

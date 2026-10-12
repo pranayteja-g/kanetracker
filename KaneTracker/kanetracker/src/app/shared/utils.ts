@@ -1,5 +1,8 @@
+<<<<<<< HEAD
 import { Freq } from '../models/recurring.interface';
 
+=======
+>>>>>>> 91f1ab019d2cec63a236787506d3f298a3addd58
 export const pad = (n: number) => String(n).padStart(2, '0');
 export const toInput = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 export const fromInput = (s: string) => {
@@ -76,6 +79,7 @@ export function parseTags(s: string): string[] {
   return [...new Set(s.split(/[,\s]+/).map(t => t.replace(/^#/, '').trim().toLowerCase()).filter(Boolean))];
 }
 
+<<<<<<< HEAD
 export { symbol } from './currency';
 
 /** Next occurrence after `d`. `dom` keeps the day-of-month when a month is shorter. */
@@ -87,3 +91,7 @@ export function advance(d: Date, freq: Freq, dom: number): Date {
   const dim = new Date(ny, nm + 1, 0).getDate();
   return new Date(ny, nm, Math.min(dom, dim));
 }
+=======
+export const CURRENCY_SYMBOL: Record<string, string> = { INR: '₹', USD: '$', EUR: '€', GBP: '£', AED: 'د.إ', SGD: 'S$', JPY: '¥' };
+export const symbol = (c: string) => CURRENCY_SYMBOL[c] || c + ' ';
+>>>>>>> 91f1ab019d2cec63a236787506d3f298a3addd58

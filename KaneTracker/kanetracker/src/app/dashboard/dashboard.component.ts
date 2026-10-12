@@ -41,9 +41,12 @@ export class DashboardComponent implements OnInit {
   recent: Tx[] = [];
   budgets: BudgetRow[] = [];
   staleBackup = false;
+<<<<<<< HEAD
   insights: Insight[] = [];
   suggestions: RecurringSuggestion[] = [];
   private dismissed = new Set<string>();
+=======
+>>>>>>> 91f1ab019d2cec63a236787506d3f298a3addd58
 
   private all: Tx[] = [];            // newest first
   private colors = new Map<string, string>();
@@ -73,6 +76,7 @@ export class DashboardComponent implements OnInit {
     this.loaded = true;
   }
 
+<<<<<<< HEAD
   icon(i: Insight) {
     return i.kind === 'forecast' ? 'trending_up' : i.kind === 'budget' ? 'savings' : i.kind === 'anomaly' ? 'priority_high' : 'show_chart';
   }
@@ -94,6 +98,8 @@ export class DashboardComponent implements OnInit {
     this.suggestions = this.suggestions.filter(x => x.key !== s.key);
   }
 
+=======
+>>>>>>> 91f1ab019d2cec63a236787506d3f298a3addd58
   private buildBudgets(buds: { category: string; limit: number }[]): BudgetRow[] {
     if (!buds.length) return [];
     const [from, to] = this.range('month');

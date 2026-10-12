@@ -8,7 +8,10 @@ import { DEFAULT_ACCOUNTS, DexieService } from '../services/dexie.service';
 import { Transaction } from '../models/transaction.interface';
 import { Category } from '../models/category.interface';
 import { InrPipe } from '../shared/inr.pipe';
+<<<<<<< HEAD
 import { getBase } from '../shared/currency';
+=======
+>>>>>>> 91f1ab019d2cec63a236787506d3f298a3addd58
 import { compressImage, parseTags, round2, symbol } from '../shared/utils';
 
 const pad = (n: number) => String(n).padStart(2, '0');
@@ -49,7 +52,11 @@ const iso = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.ge
           <button type="button" [class.on]="f.type === 'expense'" (click)="setType('expense')">Expense</button>
           <button type="button" [class.on]="f.type === 'income'" (click)="setType('income')">Income</button>
         </div>
+<<<<<<< HEAD
         <label><span class="label">Amount {{ sym(tx.currency || base) }}</span><input type="number" inputmode="decimal" min="0.01" step="0.01" [(ngModel)]="f.amount" /></label>
+=======
+        <label><span class="label">Amount {{ tx.currency ? sym(tx.currency) : '₹' }}</span><input type="number" inputmode="decimal" min="0.01" step="0.01" [(ngModel)]="f.amount" /></label>
+>>>>>>> 91f1ab019d2cec63a236787506d3f298a3addd58
         <label><span class="label">Category</span>
           <select [(ngModel)]="f.category">
             <option value="" disabled>Select</option>
@@ -109,7 +116,10 @@ export class TransactionDetailDialogComponent implements OnInit {
   accounts: string[] = [];
   zoom = false;
   sym = symbol;
+<<<<<<< HEAD
   base = getBase();
+=======
+>>>>>>> 91f1ab019d2cec63a236787506d3f298a3addd58
   private all: Category[] = [];
 
   constructor(

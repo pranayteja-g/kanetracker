@@ -10,11 +10,17 @@ import { CategoryDialogComponent } from '../category-dialog/category-dialog.comp
 import { Category } from '../models/category.interface';
 import { Freq, Recurring } from '../models/recurring.interface';
 import { Transaction } from '../models/transaction.interface';
+<<<<<<< HEAD
 import { DEFAULT_ACCOUNTS, DexieService, advance } from '../services/dexie.service';
 import { InrPipe } from '../shared/inr.pipe';
 import { compressImage, fromInput, parseTags, round2, symbol, toInput } from '../shared/utils';
 import { getBase, presetsFor } from '../shared/currency';
 import { buildClassifier } from '../shared/categorize';
+=======
+import { DEFAULT_ACCOUNTS, DEFAULT_RATES, DexieService, advance } from '../services/dexie.service';
+import { InrPipe } from '../shared/inr.pipe';
+import { compressImage, fromInput, parseTags, round2, symbol, toInput } from '../shared/utils';
+>>>>>>> 91f1ab019d2cec63a236787506d3f298a3addd58
 
 type Type = 'income' | 'expense';
 interface Hints { cats: string[]; amounts: Record<string, number[]> }
@@ -41,7 +47,11 @@ export class TransactionFormComponent implements OnInit, AfterViewInit {
     category: ['', Validators.required],
     date: [toInput(new Date()), Validators.required],
     description: ['', Validators.maxLength(200)],
+<<<<<<< HEAD
     currency: getBase(),
+=======
+    currency: 'INR',
+>>>>>>> 91f1ab019d2cec63a236787506d3f298a3addd58
     account: '',
     tags: '',
     repeat: 'none' as 'none' | Freq,
@@ -50,6 +60,7 @@ export class TransactionFormComponent implements OnInit, AfterViewInit {
   maxDate = toInput(new Date(Date.now() + 7 * 864e5));
   categories: Category[] = [];
   accounts: string[] = DEFAULT_ACCOUNTS;
+<<<<<<< HEAD
   base = getBase();
   currencies: string[] = [getBase()];
   rates: Record<string, number> = {};
@@ -58,6 +69,12 @@ export class TransactionFormComponent implements OnInit, AfterViewInit {
   autoPicked = false;
   private manual = false;
   private clf?: ReturnType<typeof buildClassifier>;
+=======
+  currencies: string[] = ['INR'];
+  rates: Record<string, number> = {};
+  presets: number[] = [100, 200, 500, 1000];
+  receipt = '';
+>>>>>>> 91f1ab019d2cec63a236787506d3f298a3addd58
   saving = false;
   sym = symbol;
 
@@ -72,39 +89,63 @@ export class TransactionFormComponent implements OnInit, AfterViewInit {
     return this.form.valid && !this.saving;
   }
 
+<<<<<<< HEAD
   /** Base-currency value of a foreign amount, or null when entering in the base currency. */
   get converted(): number | null {
     const { currency, amount } = this.form.getRawValue();
     return currency !== this.base && amount && this.rates[currency] ? round2(amount * this.rates[currency]) : null;
+=======
+  /** Base-currency value of a foreign amount, or null for INR. */
+  get converted(): number | null {
+    const { currency, amount } = this.form.getRawValue();
+    return currency !== 'INR' && amount && this.rates[currency] ? round2(amount * this.rates[currency]) : null;
+>>>>>>> 91f1ab019d2cec63a236787506d3f298a3addd58
   }
 
   async ngOnInit() {
     const [cats, rates, accounts] = await Promise.all([
       this.db.getAllCategories(),
+<<<<<<< HEAD
       this.db.getRates(),
+=======
+      this.db.getSetting('rates', DEFAULT_RATES),
+>>>>>>> 91f1ab019d2cec63a236787506d3f298a3addd58
       this.db.getSetting('accounts', DEFAULT_ACCOUNTS),
     ]);
     this.allCats = cats;
     this.rates = rates;
     this.accounts = accounts;
+<<<<<<< HEAD
     this.currencies = [this.base, ...Object.keys(rates).filter(c => c !== this.base)];
     await this.filterCats();
     this.form.controls.currency.valueChanges.subscribe(() => this.updatePresets());
     // learn from past entries; suggest a category while typing the note
     this.clf = buildClassifier(await this.db.getAllTransactions(), cats);
     this.form.controls.description.valueChanges.subscribe(d => this.suggestFromNote(d));
+=======
+    this.currencies = ['INR', ...Object.keys(rates)];
+    await this.filterCats();
+    this.form.controls.currency.valueChanges.subscribe(() => this.updatePresets());
+>>>>>>> 91f1ab019d2cec63a236787506d3f298a3addd58
   }
 
   ngAfterViewInit() {
     setTimeout(() => this.amountEl?.nativeElement.focus(), 150);
   }
 
+<<<<<<< HEAD
   private suggestFromNote(desc: string) {
     if (this.manual || !this.clf || desc.trim().length < 3) { if (!desc.trim()) this.autoPicked = false; return; }
     const s = this.clf.suggest(desc, this.type);
     if (s.source === 'default' || s.conf < 0.55 || !this.categories.some(c => c.name === s.category)) return;
     if (this.form.controls.category.value !== s.category) this.pick(s.category, true);
     this.autoPicked = true;
+=======
+  async setType(t: Type) {
+    if (t === this.type) return;
+    this.form.patchValue({ type: t, category: '' });
+    await this.filterCats();
+>>>>>>> 91f1ab019d2cec63a236787506d3f298a3addd58
   }
 
   async setType(t: Type) {
@@ -169,7 +210,11 @@ export class TransactionFormComponent implements OnInit, AfterViewInit {
         date: when.toISOString(),
         description: v.description.trim(),
       };
+<<<<<<< HEAD
       if (v.currency !== this.base) {
+=======
+      if (v.currency !== 'INR') {
+>>>>>>> 91f1ab019d2cec63a236787506d3f298a3addd58
         const rate = this.rates[v.currency];
         if (!rate) throw new Error('No rate');
         Object.assign(tx, { currency: v.currency, origAmount: entered, rate, amount: round2(entered * rate) });
@@ -221,9 +266,15 @@ export class TransactionFormComponent implements OnInit, AfterViewInit {
 
   private updatePresets() {
     const { currency, category, type } = this.form.getRawValue();
+<<<<<<< HEAD
     const std = presetsFor(currency);
     if (currency !== this.base) { this.presets = std; return; }
     const own = this.hints[type]?.amounts[category] || [];
     this.presets = [...new Set([...own, ...std])].slice(0, 5);
+=======
+    if (currency !== 'INR') { this.presets = [10, 50, 100, 500]; return; }
+    const own = this.hints[type]?.amounts[category] || [];
+    this.presets = [...new Set([...own, 100, 200, 500, 1000])].slice(0, 5);
+>>>>>>> 91f1ab019d2cec63a236787506d3f298a3addd58
   }
 }
