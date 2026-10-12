@@ -5,9 +5,13 @@ import { MatIconModule } from '@angular/material/icon';
 import { DexieService } from '../services/dexie.service';
 import { Transaction } from '../models/transaction.interface';
 import { InrPipe } from '../shared/inr.pipe';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import { Insight, RecurringSuggestion, buildInsights, detectRecurring } from '../shared/insights';
+import { fmtMoney } from '../shared/currency';
 
 type Period = 'month' | 'last' | '3m' | 'year' | 'all';
 interface Tx extends Transaction { t: number }
+interface BudgetRow { name: string; spent: number; limit: number; pct: number; color: string; over: boolean }
 interface TopCat { name: string; amount: number; color: string; pct: number }
 
 @Component({
@@ -35,19 +39,70 @@ export class DashboardComponent implements OnInit {
   trend = '';
   top: TopCat[] = [];
   recent: Tx[] = [];
+  budgets: BudgetRow[] = [];
+  staleBackup = false;
+  insights: Insight[] = [];
+  suggestions: RecurringSuggestion[] = [];
+  private dismissed = new Set<string>();
 
   private all: Tx[] = [];            // newest first
   private colors = new Map<string, string>();
 
-  constructor(private db: DexieService) {}
+  constructor(private db: DexieService, private snack: MatSnackBar) {}
 
   async ngOnInit() {
-    const [txs, cats] = await Promise.all([this.db.getTransactionsNewestFirst(), this.db.getAllCategories()]);
+    const [txs, cats, buds, lb] = await Promise.all([
+      this.db.getTransactionsNewestFirst(), this.db.getAllCategories(), this.db.budgets.toArray(),
+      this.db.getSetting<string>('lastBackup', ''),
+    ]);
     this.all = txs.map(t => ({ ...t, t: new Date(t.date).getTime() }));
     cats.forEach(c => this.colors.set(c.name, c.color));
     this.hasAny = this.all.length > 0;
+    this.staleBackup = this.all.length >= 10 && (!lb || Date.now() - new Date(lb).getTime() > 30 * 864e5);
+    this.budgets = this.buildBudgets(buds);
     this.compute();
+    try {
+      const [rules, dis] = await Promise.all([this.db.recurring.toArray(), this.db.getSetting<string[]>('dismissedRecurring', [])]);
+      this.dismissed = new Set(dis);
+      const now = new Date();
+      this.insights = buildInsights(txs, buds, rules, now, n => fmtMoney(n));
+      this.suggestions = detectRecurring(txs, rules, this.dismissed, now);
+    } catch (e) {
+      console.error('Insights failed', e); // never block Home
+    }
     this.loaded = true;
+  }
+
+  icon(i: Insight) {
+    return i.kind === 'forecast' ? 'trending_up' : i.kind === 'budget' ? 'savings' : i.kind === 'anomaly' ? 'priority_high' : 'show_chart';
+  }
+
+  freqLabel(f: string) { return f === 'weekly' ? 'every week' : f === 'monthly' ? 'every month' : 'every year'; }
+
+  async addRule(s: RecurringSuggestion) {
+    await this.db.recurring.add({
+      type: s.type, amount: s.amount, category: s.category, description: s.label, account: s.account,
+      freq: s.freq, dom: s.dom, nextDate: s.nextDate.toISOString(), active: true,
+    });
+    this.suggestions = this.suggestions.filter(x => x.key !== s.key);
+    this.snack.open('Recurring rule added', undefined, { duration: 2000 });
+  }
+
+  async dismissRule(s: RecurringSuggestion) {
+    this.dismissed.add(s.key);
+    await this.db.setSetting('dismissedRecurring', [...this.dismissed]);
+    this.suggestions = this.suggestions.filter(x => x.key !== s.key);
+  }
+
+  private buildBudgets(buds: { category: string; limit: number }[]): BudgetRow[] {
+    if (!buds.length) return [];
+    const [from, to] = this.range('month');
+    const spent = new Map<string, number>();
+    for (const t of this.all) if (t.type === 'expense' && t.t >= from && t.t <= to) spent.set(t.category, (spent.get(t.category) || 0) + t.amount);
+    return buds.map(b => {
+      const s = spent.get(b.category) || 0;
+      return { name: b.category, spent: s, limit: b.limit, pct: Math.min(100, (s / b.limit) * 100), color: this.color(b.category), over: s > b.limit };
+    }).sort((a, b) => b.spent / b.limit - a.spent / a.limit);
   }
 
   setPeriod(p: Period) {

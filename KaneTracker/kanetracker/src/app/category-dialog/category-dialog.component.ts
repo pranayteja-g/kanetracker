@@ -45,12 +45,12 @@ const HEX = /^#[0-9a-f]{6}$/i;
     .name { min-height: 48px; padding: 0 14px; border: 1px solid var(--k-line); border-radius: 12px; font: inherit; font-size: 16px; }
     .seg { display: flex; padding: 3px; border-radius: 999px; background: var(--k-line); }
     .seg button { flex: 1; border: 0; background: none; padding: 8px; border-radius: 999px; font-size: 14px; color: var(--k-muted); }
-    .seg button.on { background: #fff; color: var(--k-ink); font-weight: 500; box-shadow: 0 1px 3px rgba(0,0,0,.1); }
+    .seg button.on { background: var(--k-surface); color: var(--k-ink); font-weight: 500; box-shadow: 0 1px 3px rgba(0,0,0,.1); }
     .label { margin: 0; }
     .colors { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; justify-items: center; }
-    .colors button { width: 34px; height: 34px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 1px var(--k-line); }
+    .colors button { width: 34px; height: 34px; border-radius: 50%; border: 2px solid var(--k-surface); box-shadow: 0 0 0 1px var(--k-line); }
     .colors button.on { box-shadow: 0 0 0 2px var(--k-ink); }
-    .err { margin: 0; color: #b91c1c; font-size: 13px; }
+    .err { margin: 0; color: var(--k-neg); font-size: 13px; }
     .save { width: 100%; }
   `],
 })

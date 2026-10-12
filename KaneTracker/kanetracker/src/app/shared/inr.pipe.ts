@@ -1,10 +1,10 @@
 import { Pipe, PipeTransform } from '@angular/core';
+import { fmtMoney } from './currency';
 
-const fmt = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 2 });
-
+/** Formats an amount in the user's base currency. (Name kept as `inr` for existing templates.) */
 @Pipe({ name: 'inr', standalone: true })
 export class InrPipe implements PipeTransform {
   transform(v: number | null | undefined): string {
-    return '₹' + fmt.format(v ?? 0);
+    return fmtMoney(v);
   }
 }

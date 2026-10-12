@@ -32,8 +32,8 @@
       <select [(ngModel)]="sort" (ngModelChange)="run()">
         <option *ngFor="let s of sorts" [value]="s.v">{{ s.l }}</option>
       </select></label>
-    <label><span class="label">Min ₹</span><input type="number" inputmode="decimal" [(ngModel)]="min" (ngModelChange)="run()" placeholder="0" /></label>
-    <label><span class="label">Max ₹</span><input type="number" inputmode="decimal" [(ngModel)]="max" (ngModelChange)="run()" placeholder="Any" /></label>
+    <label><span class="label">Min {{ cur }}</span><input type="number" inputmode="decimal" [(ngModel)]="min" (ngModelChange)="run()" placeholder="0" /></label>
+    <label><span class="label">Max {{ cur }}</span><input type="number" inputmode="decimal" [(ngModel)]="max" (ngModelChange)="run()" placeholder="Any" /></label>
   </div>
 
   <div class="sum">

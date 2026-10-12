@@ -1,7 +1,7 @@
 .chips { margin-top: 4px; }
 .hero { padding: 28px 0 8px; }
 .big { font-size: 44px; font-weight: 600; letter-spacing: -.03em; line-height: 1.1; margin: 4px 0; font-variant-numeric: tabular-nums; }
-.big.neg { color: #b91c1c; }
+.big.neg { color: var(--k-neg); }
 .split { display: flex; gap: 32px; margin-top: 20px; }
 .split div { display: flex; flex-direction: column; gap: 2px; }
 .split b { font-size: 18px; font-weight: 500; font-variant-numeric: tabular-nums; }
@@ -12,3 +12,16 @@
 .cat-h b { font-weight: 500; font-variant-numeric: tabular-nums; }
 .bar { height: 4px; background: var(--k-line); border-radius: 2px; overflow: hidden; }
 .bar div { height: 100%; border-radius: 2px; }
+
+.hb { display: flex; }
+.cat-h b.over { color: var(--k-neg); }
+.nudge { display: flex; align-items: center; gap: 8px; margin-top: 12px; padding: 10px 12px; border-radius: var(--k-r); background: var(--k-warn-bg); color: var(--k-warn); font-size: 13px; }
+.nudge mat-icon { flex: none; font-size: 20px; width: 20px; height: 20px; }
+
+.ins { display: flex; gap: 10px; align-items: flex-start; margin: 8px 0; font-size: 14px; line-height: 1.4; }
+.ins mat-icon { flex: none; font-size: 18px; width: 18px; height: 18px; margin-top: 1px; color: var(--k-muted); }
+.ins.warn mat-icon { color: var(--k-warn); }
+.sug { display: flex; align-items: center; gap: 6px; padding: 8px 0; border-bottom: 1px solid var(--k-line); }
+.sug .m { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.sug .m b { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sug .m span { font-size: 13px; color: var(--k-muted); }

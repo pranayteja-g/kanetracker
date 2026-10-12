@@ -8,6 +8,7 @@ import { Transaction } from '../models/transaction.interface';
 import { Category } from '../models/category.interface';
 import { TransactionDetailDialogComponent } from '../transaction-detail-dialog/transaction-detail-dialog.component';
 import { InrPipe } from '../shared/inr.pipe';
+import { getBase, symbol } from '../shared/currency';
 
 type TypeF = '' | 'expense' | 'income';
 type DateF = 'any' | 'today' | '7d' | 'month' | 'year' | 'custom';
@@ -29,6 +30,7 @@ const parse = (s: string) => {
   styleUrls: ['./search.component.css'],
 })
 export class SearchComponent implements OnInit, OnDestroy {
+  cur = symbol(getBase());
   types: { v: TypeF; l: string }[] = [{ v: '', l: 'All' }, { v: 'expense', l: 'Expenses' }, { v: 'income', l: 'Income' }];
   dates: { v: DateF; l: string }[] = [
     { v: 'any', l: 'Any time' }, { v: 'today', l: 'Today' }, { v: '7d', l: '7 days' },
@@ -76,7 +78,7 @@ export class SearchComponent implements OnInit, OnDestroy {
     const [txs, cats] = await Promise.all([this.db.getAllTransactions(), this.db.getAllCategories()]);
     this.categories = cats;
     cats.forEach(c => this.colors.set(c.name, c.color));
-    this.items = txs.map(tx => ({ tx, t: new Date(tx.date).getTime(), text: `${tx.description} ${tx.category}`.toLowerCase() }));
+    this.items = txs.map(tx => ({ tx, t: new Date(tx.date).getTime(), text: `${tx.description} ${tx.category} ${tx.account || ""} ${(tx.tags || []).join(" ")}`.toLowerCase() }));
     this.run();
   }
 

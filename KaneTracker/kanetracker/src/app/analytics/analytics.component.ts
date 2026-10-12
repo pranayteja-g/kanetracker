@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, OnInit } from '@angular/core';
+import { fmtCompact, fmtMoney } from '../shared/currency';
 import { DecimalPipe, NgFor, NgIf } from '@angular/common';
 import { BaseChartDirective } from 'ng2-charts';
 import { BarController, BarElement, CategoryScale, Chart, ChartConfiguration, ChartData, Legend, LinearScale, Tooltip } from 'chart.js';
@@ -21,10 +22,7 @@ const fromInput = (s: string) => {
 };
 const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
 const endOfDay = (d: Date) => startOfDay(d) + DAY - 1;
-const compact = (v: number | string) => {
-  const n = Number(v);
-  return n >= 1e7 ? `₹${+(n / 1e7).toFixed(1)}Cr` : n >= 1e5 ? `₹${+(n / 1e5).toFixed(1)}L` : n >= 1e3 ? `₹${+(n / 1e3).toFixed(1)}k` : `₹${n}`;
-};
+const compact = (v: number | string) => fmtCompact(Number(v));
 
 @Component({
   selector: 'app-analytics',
@@ -74,7 +72,7 @@ const compact = (v: number | string) => {
     .hero { display: flex; justify-content: space-between; gap: 8px; padding: 24px 0 4px; }
     .hero div { display: flex; flex-direction: column; gap: 2px; }
     .hero b { font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; }
-    .neg { color: #b91c1c; }
+    .neg { color: var(--k-neg); }
     .chart { position: relative; height: 220px; }
     .cat { margin-bottom: 14px; }
     .cat-h { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 6px; }
@@ -88,6 +86,7 @@ const compact = (v: number | string) => {
   `],
 })
 export class AnalyticsComponent implements OnInit {
+  private dark = matchMedia('(prefers-color-scheme: dark)').matches;
   presets: { k: Preset; l: string }[] = [
     { k: '7d', l: '7 days' },
     { k: 'month', l: 'This month' },
@@ -118,7 +117,7 @@ export class AnalyticsComponent implements OnInit {
     },
     plugins: {
       legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 8 } },
-      tooltip: { callbacks: { label: c => `${c.dataset.label}: ₹${Number(c.parsed.y).toLocaleString('en-IN')}` } },
+      tooltip: { callbacks: { label: c => `${c.dataset.label}: ${fmtMoney(Number(c.parsed.y))}` } },
     },
   };
 
@@ -199,7 +198,7 @@ export class AnalyticsComponent implements OnInit {
     this.chart = {
       labels: [...buckets.keys()].map(k => this.label(k)),
       datasets: [
-        { label: 'Spent', data: vals.map(v => v.e), backgroundColor: '#171717', borderRadius: 3 },
+        { label: 'Spent', data: vals.map(v => v.e), backgroundColor: this.dark ? '#e5e5e5' : '#171717', borderRadius: 3 },
         { label: 'Income', data: vals.map(v => v.i), backgroundColor: '#86c9a0', borderRadius: 3 },
       ],
     };
