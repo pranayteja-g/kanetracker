@@ -35,6 +35,7 @@ const iso = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.ge
           <ng-container *ngIf="tx.currency"><dt>Original</dt><dd>{{ sym(tx.currency) }}{{ tx.origAmount }} &#64; {{ tx.rate }}</dd></ng-container>
           <ng-container *ngIf="tx.account"><dt>Account</dt><dd>{{ tx.account }}</dd></ng-container>
           <ng-container *ngIf="tx.tags?.length"><dt>Tags</dt><dd>#{{ tx.tags!.join(' #') }}</dd></ng-container>
+          <ng-container *ngIf="tx.split"><dt>Split</dt><dd>Bill {{ tx.split.total | inr }} · {{ tx.split.paidBy === 'me' ? 'you paid' : tx.split.paidBy + ' paid' }} · with {{ tx.split.with.join(', ') }}</dd></ng-container>
           <ng-container *ngIf="tripName"><dt>Trip</dt><dd>{{ tripName }}</dd></ng-container>
           <ng-container *ngIf="tx.recurringId"><dt>Repeats</dt><dd>Recurring entry</dd></ng-container>
         </dl>
@@ -51,7 +52,8 @@ const iso = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.ge
           <button type="button" [class.on]="f.type === 'expense'" (click)="setType('expense')">Expense</button>
           <button type="button" [class.on]="f.type === 'income'" (click)="setType('income')">Income</button>
         </div>
-        <label><span class="label">Amount {{ sym(tx.currency || base) }}</span><input type="number" inputmode="decimal" min="0.01" step="0.01" [(ngModel)]="f.amount" /></label>
+        <label><span class="label">Amount {{ sym(tx.currency || base) }}</span><input type="number" inputmode="decimal" min="0.01" step="0.01" [(ngModel)]="f.amount" [disabled]="!!tx.split" /></label>
+        <p class="muted" *ngIf="tx.split">Split entry: this is your share. To change the bill, delete and add again.</p>
         <label><span class="label">Category</span>
           <select [(ngModel)]="f.category">
             <option value="" disabled>Select</option>
@@ -171,6 +173,7 @@ export class TransactionDetailDialogComponent implements OnInit {
       const tags = parseTags(this.f.tags);
       await this.db.transactions.where(':id').equals(this.tx.id).modify((row: Transaction) => {
         row.type = this.f.type;
+        if (row.type === 'income') delete row.split;
         row.category = this.f.category;
         row.date = new Date(y, m - 1, d).toISOString();
         row.description = this.f.description.trim();

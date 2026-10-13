@@ -26,6 +26,9 @@
       </div>
     </section>
 
+    <a routerLink="/people" class="nudge" *ngIf="owe.owedToMe > 0 || owe.iOwe > 0"><mat-icon>group</mat-icon>
+      <span>{{ owe.owedToMe > 0 ? 'Friends owe you ' + fmt(owe.owedToMe) : '' }}{{ owe.owedToMe > 0 && owe.iOwe > 0 ? ' · ' : '' }}{{ owe.iOwe > 0 ? 'You owe ' + fmt(owe.iOwe) : '' }}</span></a>
+
     <section class="sec" *ngFor="let c of tripCards">
       <div class="row-h"><h2><mat-icon class="tic">luggage</mat-icon>{{ c.name }}</h2><a [routerLink]="['/trips', c.id]">Open</a></div>
       <p class="muted">Day {{ c.s.dayNo }} of {{ c.s.days }}</p>

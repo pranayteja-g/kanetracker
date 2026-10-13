@@ -10,6 +10,7 @@ import { Insight, RecurringSuggestion, buildInsights, detectRecurring } from '..
 import { fmtMoney } from '../shared/currency';
 import { TripSummary, summarizeTrip, tripStatus } from '../shared/trips';
 import { Trip } from '../models/trip.interface';
+import { computeBalances, totals } from '../shared/splits';
 
 interface TripCard { id: number; name: string; s: TripSummary; row: BudgetRow }
 
@@ -45,6 +46,7 @@ export class DashboardComponent implements OnInit {
   recent: Tx[] = [];
   budgets: BudgetRow[] = [];
   tripCards: TripCard[] = [];
+  owe = { owedToMe: 0, iOwe: 0 };
   staleBackup = false;
   newSinceBackup = 0;
   insights: Insight[] = [];
@@ -71,6 +73,10 @@ export class DashboardComponent implements OnInit {
     this.staleBackup = this.all.length >= 10 && (!lb || age > 30 || this.newSinceBackup >= 50 || (age > 14 && this.newSinceBackup >= 15));
     this.budgets = this.buildBudgets(buds);
     this.compute();
+    try {
+      const sets = await this.db.getSetting<any[]>('settlements', []);
+      this.owe = totals(computeBalances(txs, sets));
+    } catch { /* never block Home */ }
     try {
       const now = new Date();
       const trips: Trip[] = await this.db.getTrips();
@@ -128,6 +134,8 @@ export class DashboardComponent implements OnInit {
   get tripRows(): BudgetRow[] {
     return this.tripCards.filter(c => c.s.planned > 0).map(c => c.row);
   }
+
+  fmt(n: number) { return fmtMoney(n); }
 
   setPeriod(p: Period) {
     this.period = p;

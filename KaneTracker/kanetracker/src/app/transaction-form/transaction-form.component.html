@@ -48,6 +48,31 @@
       [class.on]="form.controls.account.value === a" (click)="toggleAccount(a)">{{ a }}</button>
   </div>
 
+  <ng-container *ngIf="type === 'expense'">
+    <p class="label">Split</p>
+    <div class="cats">
+      <button type="button" class="cat" [class.on]="splitOn" (click)="toggleSplit()"><mat-icon class="tic">group</mat-icon>Split with friends</button>
+    </div>
+    <ng-container *ngIf="splitOn">
+      <div class="cats">
+        <button type="button" class="cat" *ngFor="let p of people" [class.on]="withPeople.includes(p)" (click)="toggleWith(p)">{{ p }}</button>
+      </div>
+      <div class="addp">
+        <input type="text" maxlength="30" placeholder="Add a person" [(ngModel)]="newPerson" [ngModelOptions]="{standalone: true}" (keydown.enter)="$event.preventDefault(); addPerson()" aria-label="New person" />
+        <button type="button" class="cat" (click)="addPerson()" [disabled]="!newPerson.trim()">Add</button>
+      </div>
+      <ng-container *ngIf="withPeople.length">
+        <p class="label">Paid by</p>
+        <div class="cats">
+          <button type="button" class="cat" [class.on]="paidBy === me" (click)="paidBy = me">Me</button>
+          <button type="button" class="cat" *ngFor="let p of withPeople" [class.on]="paidBy === p" (click)="paidBy = p">{{ p }}</button>
+        </div>
+      </ng-container>
+      <p class="muted" *ngIf="share !== null">Split equally between you and {{ withPeople.length }} other{{ withPeople.length === 1 ? '' : 's' }}. Your share: {{ sym(form.controls.currency.value) }}{{ share }}. Counts as your expense.</p>
+      <p class="muted" *ngIf="!withPeople.length">Pick at least one person.</p>
+    </ng-container>
+  </ng-container>
+
   <div class="fields">
     <label><mat-icon>event</mat-icon><input type="date" formControlName="date" [max]="maxDate" aria-label="Date" /></label>
     <label><mat-icon>notes</mat-icon><input type="text" formControlName="description" maxlength="200"
@@ -55,7 +80,7 @@
     <label><mat-icon>sell</mat-icon><input type="text" formControlName="tags"
         placeholder="Tags: trip, work (optional)" aria-label="Tags" autocapitalize="none" /></label>
     <label><mat-icon>repeat</mat-icon>
-      <select formControlName="repeat" aria-label="Repeat">
+      <select formControlName="repeat" aria-label="Repeat" [attr.disabled]="splitOn ? true : null">
         <option value="none">Does not repeat</option>
         <option value="daily">Repeats daily</option>
         <option value="weekly">Repeats weekly</option>

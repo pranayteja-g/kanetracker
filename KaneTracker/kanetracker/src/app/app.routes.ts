@@ -18,6 +18,7 @@ export const routes: Routes = [
       { path: 'budgets', loadComponent: () => import('./budgets/budgets.component').then(m => m.BudgetsComponent) },
       { path: 'import', loadComponent: () => import('./import/import.component').then(m => m.ImportComponent) },
       { path: 'summary', loadComponent: () => import('./summary/summary.component').then(m => m.SummaryComponent) },
+      { path: 'people', loadComponent: () => import('./people/people.component').then(m => m.PeopleComponent) },
       { path: 'trips', loadComponent: () => import('./trips/trips.component').then(m => m.TripsComponent) },
       { path: 'trips/new', loadComponent: () => import('./trips/trip-edit.component').then(m => m.TripEditComponent) },
       { path: 'trips/:id/edit', loadComponent: () => import('./trips/trip-edit.component').then(m => m.TripEditComponent) },

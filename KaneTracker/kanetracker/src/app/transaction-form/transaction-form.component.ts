@@ -1,6 +1,6 @@
 import { AfterViewInit, Component, ElementRef, OnInit, ViewChild, inject } from '@angular/core';
 import { NgFor, NgIf } from '@angular/common';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
@@ -12,6 +12,7 @@ import { Freq, Recurring } from '../models/recurring.interface';
 import { Transaction } from '../models/transaction.interface';
 import { Trip } from '../models/trip.interface';
 import { tripStatus, tripsOnDate } from '../shared/trips';
+import { ME, myShare } from '../shared/splits';
 import { DEFAULT_ACCOUNTS, DexieService, advance } from '../services/dexie.service';
 import { InrPipe } from '../shared/inr.pipe';
 import { compressImage, fromInput, parseTags, round2, symbol, toInput } from '../shared/utils';
@@ -24,7 +25,7 @@ interface Hints { cats: string[]; amounts: Record<string, number[]> }
 @Component({
   selector: 'app-transaction-form',
   standalone: true,
-  imports: [NgFor, NgIf, ReactiveFormsModule, MatIconModule, InrPipe],
+  imports: [NgFor, NgIf, FormsModule, ReactiveFormsModule, MatIconModule, InrPipe],
   templateUrl: './transaction-form.component.html',
   styleUrls: ['./transaction-form.component.css'],
 })
@@ -59,6 +60,13 @@ export class TransactionFormComponent implements OnInit, AfterViewInit {
   presets: number[] = presetsFor(getBase());
   receipt = '';
   trips: Trip[] = [];
+  // split
+  people: string[] = [];
+  splitOn = false;
+  withPeople: string[] = [];
+  paidBy = ME;
+  newPerson = '';
+  me = ME;
   tripId = 0;
   private baseRates: Record<string, number> = {};
   autoPicked = false;
@@ -74,14 +82,40 @@ export class TransactionFormComponent implements OnInit, AfterViewInit {
     return this.form.controls.type.value;
   }
 
-  get canSave() {
-    return this.form.valid && !this.saving;
-  }
-
   /** Base-currency value of a foreign amount, or null when entering in the base currency. */
   get converted(): number | null {
     const { currency, amount } = this.form.getRawValue();
     return currency !== this.base && amount && this.rates[currency] ? round2(amount * this.rates[currency]) : null;
+  }
+
+  get share(): number | null {
+    const a = Number(this.form.controls.amount.value);
+    return this.splitOn && a > 0 && this.withPeople.length ? myShare(a, this.withPeople.length) : null;
+  }
+
+  get canSave() {
+    return this.form.valid && !this.saving && (!this.splitOn || this.withPeople.length > 0);
+  }
+
+  toggleSplit() {
+    this.splitOn = !this.splitOn;
+    if (this.splitOn) this.form.controls.repeat.setValue('none');
+    else { this.withPeople = []; this.paidBy = ME; }
+  }
+
+  toggleWith(p: string) {
+    this.withPeople = this.withPeople.includes(p) ? this.withPeople.filter(x => x !== p) : [...this.withPeople, p];
+    if (this.paidBy !== ME && !this.withPeople.includes(this.paidBy)) this.paidBy = ME;
+  }
+
+  async addPerson() {
+    const n = this.newPerson.trim().slice(0, 30);
+    this.newPerson = '';
+    if (!n || n.toLowerCase() === ME) return;
+    const ex = this.people.find(p => p.toLowerCase() === n.toLowerCase());
+    if (!ex) { this.people = [...this.people, n]; await this.db.setSetting('people', this.people); }
+    const name = ex ?? n;
+    if (!this.withPeople.includes(name)) this.withPeople = [...this.withPeople, name];
   }
 
   get trip(): Trip | undefined {
@@ -118,6 +152,7 @@ export class TransactionFormComponent implements OnInit, AfterViewInit {
       this.db.getSetting('accounts', DEFAULT_ACCOUNTS),
     ]);
     this.allCats = cats;
+    this.people = await this.db.getSetting<string[]>('people', []);
     this.rates = rates;
     this.baseRates = { ...rates };
     this.accounts = accounts;
@@ -207,9 +242,11 @@ export class TransactionFormComponent implements OnInit, AfterViewInit {
       const v = this.form.getRawValue();
       const when = fromInput(v.date);
       const entered = Number(v.amount);
+      const isSplit = this.splitOn && v.type === 'expense' && this.withPeople.length > 0;
+      const mine = isSplit ? myShare(entered, this.withPeople.length) : entered;
       const tx: Transaction = {
         type: v.type,
-        amount: entered,
+        amount: mine,
         category: v.category.trim(),
         date: when.toISOString(),
         description: v.description.trim(),
@@ -217,15 +254,16 @@ export class TransactionFormComponent implements OnInit, AfterViewInit {
       if (v.currency !== this.base) {
         const rate = this.rates[v.currency];
         if (!rate) throw new Error('No rate');
-        Object.assign(tx, { currency: v.currency, origAmount: entered, rate, amount: round2(entered * rate) });
+        Object.assign(tx, { currency: v.currency, origAmount: mine, rate, amount: round2(mine * rate) });
       }
+      if (isSplit) tx.split = { total: v.currency !== this.base ? round2(entered * this.rates[v.currency]) : entered, paidBy: this.paidBy, with: [...this.withPeople] };
       if (v.type === 'expense' && this.tripId) tx.tripId = this.tripId;
       if (v.account) tx.account = v.account;
       const tags = parseTags(v.tags);
       if (tags.length) tx.tags = tags;
       if (this.receipt) tx.receipt = this.receipt;
 
-      if (v.repeat !== 'none') {
+      if (v.repeat !== 'none' && !isSplit) {
         const rule: Recurring = {
           type: tx.type, amount: tx.amount, category: tx.category, description: tx.description,
           account: tx.account, tags: tx.tags, freq: v.repeat, dom: when.getDate(), active: true,

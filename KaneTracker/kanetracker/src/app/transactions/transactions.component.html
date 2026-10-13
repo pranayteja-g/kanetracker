@@ -49,6 +49,7 @@
             <mat-icon class="mini" *ngIf="t.receipt">photo_camera</mat-icon>
             <mat-icon class="mini" *ngIf="t.recurringId">repeat</mat-icon>
             <mat-icon class="mini" *ngIf="t.tripId">luggage</mat-icon>
+            <mat-icon class="mini" *ngIf="t.split">group</mat-icon>
             <span class="a" [class.income]="t.type === 'income'">{{ t.type === 'income' ? '+' : '−' }}{{ t.amount | inr }}</span>
           </button>
           <button class="dup" (click)="dup(t)" aria-label="Duplicate"><mat-icon>content_copy</mat-icon></button>

@@ -34,3 +34,5 @@
 .fields .file span { flex: 1; font-size: 16px; }
 .fields .file img { height: 36px; width: 36px; object-fit: cover; border-radius: 8px; }
 .tic { font-size: 16px; width: 16px; height: 16px; margin-right: 4px; }
+
+.addp { display: flex; gap: 8px; margin: 8px 0; } .addp input { flex: 1; min-width: 0; min-height: 44px; padding: 0 12px; border: 1px solid var(--k-line); border-radius: 12px; background: var(--k-surface); color: var(--k-ink); font: inherit; font-size: 16px; box-sizing: border-box; }

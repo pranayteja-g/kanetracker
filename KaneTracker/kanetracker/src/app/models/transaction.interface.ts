@@ -17,4 +17,6 @@ export interface Transaction {
   recurringId?: number;
   /** Link to a trip (counts toward that trip's plan; still a normal expense everywhere else). */
   tripId?: number;
+  /** Shared bill. `amount` is MY share; `total` is the whole bill (base currency), split equally. */
+  split?: { total: number; paidBy: string; with: string[] };
 }
