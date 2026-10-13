@@ -76,11 +76,11 @@ import { TransactionDetailDialogComponent } from '../transaction-detail-dialog/t
         <div class="cat" *ngFor="let r of s.rows">
           <div class="cat-h">
             <span><i [style.background]="color(r.category)"></i>{{ r.category }}</span>
-            <b *ngIf="r.state !== 'unplanned'" [class.neg]="r.state === 'over'">{{ r.spent | inr }} / {{ r.planned | inr }}</b>
+            <b *ngIf="r.state !== 'unplanned'" [class.neg]="r.state === 'over'">{{ r.spent | inr }} / {{ r.planned | inr }}<span class="muted" *ngIf="foreign"> · {{ tm(r.planned / trip.rate) }}</span></b>
             <b *ngIf="r.state === 'unplanned'">{{ r.spent | inr }} <em class="tag">unplanned</em></b>
           </div>
           <div class="bar" *ngIf="r.state !== 'unplanned'"><div [style.width.%]="min100(r.pct)" [style.background]="r.state === 'over' ? '#dc2626' : r.state === 'near' ? '#f59e0b' : color(r.category)"></div></div>
-          <p class="left" *ngIf="r.state !== 'unplanned'" [class.neg]="r.state === 'over'">{{ r.left >= 0 ? (r.left | inr) + ' left' : 'Over by ' + (-r.left | inr) }}</p>
+          <p class="left" *ngIf="r.state !== 'unplanned'" [class.neg]="r.state === 'over'">{{ r.left >= 0 ? (r.left | inr) + ' left' : 'Over by ' + (-r.left | inr) }}<span class="muted" *ngIf="foreign"> · ≈ {{ tm(abs(r.left) / trip.rate) }}</span></p>
         </div>
       </section>
 
