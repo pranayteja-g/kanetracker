@@ -24,6 +24,7 @@ import { download, toCsv, toInput } from '../shared/utils';
         <div class="row-h"><h2>Data</h2></div>
         <a class="link" routerLink="/import"><mat-icon>upload_file</mat-icon>Import statement / SMS<mat-icon class="c">chevron_right</mat-icon></a>
         <a class="link" routerLink="/trips"><mat-icon>flight_takeoff</mat-icon>Trips<mat-icon class="c">chevron_right</mat-icon></a>
+        <a class="link" routerLink="/accounts"><mat-icon>account_balance_wallet</mat-icon>Accounts<mat-icon class="c">chevron_right</mat-icon></a>
         <a class="link" routerLink="/people"><mat-icon>group</mat-icon>Splits<mat-icon class="c">chevron_right</mat-icon></a>
         <a class="link" routerLink="/recurring"><mat-icon>repeat</mat-icon>Recurring<mat-icon class="c">chevron_right</mat-icon></a>
         <a class="link" routerLink="/budgets"><mat-icon>savings</mat-icon>Budgets<mat-icon class="c">chevron_right</mat-icon></a>

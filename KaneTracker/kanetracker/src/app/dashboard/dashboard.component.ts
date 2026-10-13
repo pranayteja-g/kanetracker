@@ -11,6 +11,7 @@ import { fmtMoney } from '../shared/currency';
 import { TripSummary, summarizeTrip, tripStatus } from '../shared/trips';
 import { Trip } from '../models/trip.interface';
 import { computeBalances, totals } from '../shared/splits';
+import { accountFlows, balances } from '../shared/accounts';
 
 interface TripCard { id: number; name: string; s: TripSummary; row: BudgetRow }
 
@@ -46,6 +47,7 @@ export class DashboardComponent implements OnInit {
   recent: Tx[] = [];
   budgets: BudgetRow[] = [];
   tripCards: TripCard[] = [];
+  acctTotal: number | null = null;
   owe = { owedToMe: 0, iOwe: 0 };
   staleBackup = false;
   newSinceBackup = 0;
@@ -76,6 +78,12 @@ export class DashboardComponent implements OnInit {
     try {
       const sets = await this.db.getSetting<any[]>('settlements', []);
       this.owe = totals(computeBalances(txs, sets));
+      const [op, tr, list] = await Promise.all([this.db.getSetting<Record<string, number>>('accountOpening', {}), this.db.getSetting<any[]>('transfers', []), this.db.getSetting<string[]>('accounts', [])]);
+      if (Object.keys(op).length) {
+        const fl = accountFlows(txs, tr);
+        const names = new Set([...list, ...Object.keys(op), ...Object.keys(fl)]);
+        this.acctTotal = Object.values(balances([...names], op, fl)).reduce((s, v) => s + v, 0);
+      }
     } catch { /* never block Home */ }
     try {
       const now = new Date();
