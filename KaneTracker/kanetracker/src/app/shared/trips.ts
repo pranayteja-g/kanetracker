@@ -54,7 +54,7 @@ export interface CatRow {
 export interface TripSummary extends Status {
   /** Planned total in base currency. */
   planned: number;
-  /** Planned total in the trip's own currency. */
+  /** Planned total in the trip's local currency (converted hint). */
   plannedTrip: number;
   spent: number;
   left: number;
@@ -80,8 +80,8 @@ export function planTotal(plan: TripPlanLine[]): number {
 export function summarizeTrip(t: Trip, txs: Transaction[], now: Date): TripSummary {
   const st = tripStatus(t, now);
   const mine = txs.filter(x => x.tripId === t.id && x.type === 'expense');
-  const plannedTrip = planTotal(t.plan);
-  const planned = round2(plannedTrip * t.rate);
+  const planned = round2(planTotal(t.plan));
+  const plannedTrip = t.rate > 0 ? planned / t.rate : planned;
 
   const s0 = dayNum(new Date(t.start));
   const today = dayNum(now);
@@ -101,7 +101,7 @@ export function summarizeTrip(t: Trip, txs: Transaction[], now: Date): TripSumma
 
   const rows: CatRow[] = [];
   const planned_ = new Map<string, number>();
-  for (const l of t.plan) if (l.amount > 0) planned_.set(l.category, (planned_.get(l.category) || 0) + l.amount * t.rate);
+  for (const l of t.plan) if (l.amount > 0) planned_.set(l.category, (planned_.get(l.category) || 0) + l.amount);
   for (const [category, p] of [...planned_.entries()].sort((a, b) => b[1] - a[1])) {
     const sp = byCat.get(category) || 0, pct = p > 0 ? (sp / p) * 100 : 0;
     rows.push({ category, planned: round2(p), spent: round2(sp), left: round2(p - sp), pct, state: sp > p ? 'over' : pct >= 80 ? 'near' : 'ok' });

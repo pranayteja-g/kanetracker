@@ -1,6 +1,6 @@
 export interface TripPlanLine {
   category: string;
-  /** Planned amount in the trip's own currency. */
+  /** Planned amount in the main (base) currency. */
   amount: number;
 }
 
@@ -11,10 +11,12 @@ export interface Trip {
   start: string;
   /** Last day (inclusive), local midnight as ISO. */
   end: string;
-  /** Currency the plan is written in. Same as the base currency for domestic trips. */
+  /** Local currency of the destination, shown as a converted hint. Same as base for domestic trips. */
   currency: string;
   /** Base-currency units per 1 trip-currency unit (1 when currency is the base). */
   rate: number;
   plan: TripPlanLine[];
+  /** true once plan amounts are in the base currency (older trips had them in the trip currency). */
+  planBase?: boolean;
   notes?: string;
 }

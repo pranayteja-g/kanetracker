@@ -35,7 +35,7 @@ import { fromInput, toInput } from '../shared/utils';
       <p class="err" *ngIf="start && end && days <= 0">End must be on or after the start.</p>
 
       <div class="two">
-        <label class="f"><span class="label">Plan currency</span>
+        <label class="f"><span class="label">Trip currency</span>
           <select [(ngModel)]="currency" (ngModelChange)="onCurrency()">
             <option *ngFor="let c of currencies" [value]="c">{{ c }} {{ sym(c) }}{{ c === base ? ' (main)' : '' }}</option>
           </select></label>
@@ -46,35 +46,37 @@ import { fromInput, toInput } from '../shared/utils';
       <section class="sec">
         <div class="row-h"><h2>Budget per category</h2></div>
         <div class="tot">
-          <label class="f"><span class="label">Total budget ({{ currency }})</span>
+          <label class="f"><span class="label">Total budget ({{ base }})</span>
             <input type="number" inputmode="decimal" min="0" step="any" [(ngModel)]="totalIn" placeholder="e.g. 25000" /></label>
           <button class="btn ghost" (click)="autoSplit()" [disabled]="!(totalIn && totalIn > 0)">Auto-split</button>
           <button class="btn ghost" (click)="evenSplit()" [disabled]="!(totalIn && totalIn > 0)">Even</button>
         </div>
         <p class="hint" *ngIf="dailyAvg && days > 0">
-          Your past trips averaged {{ money(dailyAvg) }}/day, so about {{ money(dailyAvg * days) }} for {{ days }} days.
+          Your past trips averaged {{ baseMoney(dailyAvg) }}/day, so about {{ baseMoney(dailyAvg * days) }} for {{ days }} days.
           <button class="link" (click)="useSuggested()">Use</button>
         </p>
         <p class="muted" *ngIf="weightsFrom">Auto-split uses {{ weightsFrom === 'past' ? 'what your past trips actually cost' : 'a typical trip mix (stay, food, transport…)' }}. Edit any amount after.</p>
 
         <div class="row" *ngFor="let c of cats">
           <span class="nm"><i [style.background]="c.color"></i>{{ c.name }}</span>
-          <input type="number" inputmode="decimal" min="0" step="any" placeholder="0" [(ngModel)]="amounts[c.name]" [attr.aria-label]="c.name + ' budget'" />
+          <div class="inp"><input type="number" inputmode="decimal" min="0" step="any" placeholder="0" [(ngModel)]="amounts[c.name]" [attr.aria-label]="c.name + ' budget'" />
+            <small *ngIf="foreign && amounts[c.name]">≈ {{ money(local(+amounts[c.name]!)) }}</small></div>
         </div>
         <button class="link more" *ngIf="more.length" (click)="showMore = !showMore">{{ showMore ? 'Hide' : 'More categories (' + more.length + ')' }}</button>
         <ng-container *ngIf="showMore">
           <div class="row" *ngFor="let c of more">
             <span class="nm"><i [style.background]="c.color"></i>{{ c.name }}</span>
-            <input type="number" inputmode="decimal" min="0" step="any" placeholder="0" [(ngModel)]="amounts[c.name]" [attr.aria-label]="c.name + ' budget'" />
+            <div class="inp"><input type="number" inputmode="decimal" min="0" step="any" placeholder="0" [(ngModel)]="amounts[c.name]" [attr.aria-label]="c.name + ' budget'" />
+              <small *ngIf="foreign && amounts[c.name]">≈ {{ money(local(+amounts[c.name]!)) }}</small></div>
           </div>
         </ng-container>
 
         <div class="sum">
           <span>Plan total</span>
-          <b>{{ money(total) }}</b>
+          <b>{{ baseMoney(total) }}</b>
         </div>
-        <p class="muted" *ngIf="currency !== base && total > 0 && (rate || 0) > 0">≈ {{ baseMoney(total * (rate || 0)) }}</p>
-        <p class="muted" *ngIf="days > 0 && total > 0">{{ money(total / days) }} per day</p>
+        <p class="muted" *ngIf="foreign && total > 0">≈ {{ money(local(total)) }}</p>
+        <p class="muted" *ngIf="days > 0 && total > 0">{{ baseMoney(total / days) }} per day</p>
       </section>
 
       <label class="f"><span class="label">Notes (optional)</span>
@@ -98,6 +100,8 @@ import { fromInput, toInput } from '../shared/utils';
     .row:last-of-type { border-bottom: 0; }
     .nm { flex: 1; display: flex; align-items: center; gap: 10px; min-width: 0; }
     .nm i { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+    .inp { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+    .inp small { font-size: 12px; color: var(--k-muted); }
     .more { padding: 10px 0 0; }
     .row input { width: 130px; text-align: right; }
     .sum { display: flex; justify-content: space-between; padding: 14px 0 4px; font-size: 16px; }
@@ -189,6 +193,8 @@ export class TripEditComponent implements OnInit {
   }
 
   back() { history.length > 1 ? history.back() : this.router.navigate(['/trips']); }
+  get foreign() { return this.currency !== this.base && Number(this.rate) > 0; }
+  local(n: number) { return n / Number(this.rate); }
   money(n: number) { return fmtMoney(n, this.currency); }
   baseMoney(n: number) { return fmtMoney(n, this.base); }
 
@@ -202,10 +208,7 @@ export class TripEditComponent implements OnInit {
 
   useSuggested() {
     if (this.dailyAvg && this.days > 0) {
-      // past averages are in the base currency; convert into the plan currency
-      const r = this.currency === this.base ? 1 : Number(this.rate) > 0 ? Number(this.rate) : 0;
-      if (!r) { this.err = 'Set the exchange rate first.'; return; }
-      this.totalIn = Math.round((this.dailyAvg * this.days) / r);
+      this.totalIn = Math.round(this.dailyAvg * this.days);
     }
   }
 
@@ -240,7 +243,7 @@ export class TripEditComponent implements OnInit {
       .map(([category, v]) => ({ category, amount: Math.round(Number(v) * 100) / 100 }));
     const trip: Trip = {
       name, start: fromInput(this.start).toISOString(), end: fromInput(this.end).toISOString(),
-      currency: this.currency, rate, plan, ...(this.notes.trim() ? { notes: this.notes.trim() } : {}),
+      currency: this.currency, rate, plan, planBase: true, ...(this.notes.trim() ? { notes: this.notes.trim() } : {}),
     };
     this.saving = true;
     try {

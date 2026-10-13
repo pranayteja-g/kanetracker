@@ -70,6 +70,15 @@ export class DexieService extends Dexie {
       trips: '++id, start'
     });
 
+    // v6: trip plans are written in the base currency (were in the trip currency)
+    this.version(6).stores({}).upgrade(tx => tx.table('trips').toCollection().modify((t: Trip) => {
+      if (!t.planBase) {
+        const r = t.rate > 0 ? t.rate : 1;
+        t.plan = (t.plan || []).map(l => ({ ...l, amount: Math.round(l.amount * r * 100) / 100 }));
+        t.planBase = true;
+      }
+    }));
+
     // Initialize tables
     this.transactions = this.table('transactions');
     this.categories = this.table('categories');
@@ -448,8 +457,9 @@ export class DexieService extends Dexie {
         });
         await this.recurring.toCollection().modify((r: Recurring) => { r.amount = round2(r.amount * rate); });
         await this.budgets.toCollection().modify((b: Budget) => { b.limit = round2(b.limit * rate); });
-        // trip plans stay in their own currency; only the trip→base rate changes
+        // trip plans follow the base currency; the trip→base rate changes too
         await this.trips.toCollection().modify((t: Trip) => {
+          t.plan = t.plan.map(l => ({ ...l, amount: round2(l.amount * rate) }));
           if (t.currency === newCode) t.rate = 1;
           else t.rate = sig(t.rate * rate);
         });
@@ -527,7 +537,14 @@ export class DexieService extends Dexie {
     const trips: Trip[] = (data.trips || []).filter((t: any) =>
       t && typeof t.name === 'string' && validDate(t.start) && validDate(t.end) && Date.parse(t.end) >= Date.parse(t.start) &&
       typeof t.currency === 'string' && /^[A-Z]{3}$/.test(t.currency) && t.rate > 0 && Array.isArray(t.plan))
-      .map((t: any) => ({ ...t, plan: t.plan.filter((l: any) => l && typeof l.category === 'string' && l.amount >= 0) }));
+      .map((t: any) => {
+        const old = !t.planBase; // older backups wrote plans in the trip currency
+        return {
+          ...t, planBase: true,
+          plan: t.plan.filter((l: any) => l && typeof l.category === 'string' && l.amount >= 0)
+            .map((l: any) => (old ? { ...l, amount: round2(l.amount * t.rate) } : l)),
+        };
+      });
     // links to trips that did not survive validation are dropped
     const tripIds = new Set(trips.map(t => t.id));
     txs.forEach(t => { if (t.tripId != null && !tripIds.has(t.tripId)) delete t.tripId; });
