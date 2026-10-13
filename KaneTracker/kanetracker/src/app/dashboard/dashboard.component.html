@@ -13,7 +13,7 @@
       [attr.aria-selected]="p.v === period" (click)="setPeriod(p.v)">{{ p.l }}</button>
   </div>
 
-  <a routerLink="/settings" class="nudge" *ngIf="staleBackup"><mat-icon>warning_amber</mat-icon>No recent backup. Data lives only in this browser. Tap to back up.</a>
+  <a routerLink="/settings" class="nudge" *ngIf="staleBackup"><mat-icon>warning_amber</mat-icon>{{ newSinceBackup > 0 ? newSinceBackup + ' new entries since your last backup.' : 'No recent backup.' }} Data lives only in this browser. Tap to back up.</a>
 
   <ng-container *ngIf="hasAny; else empty">
     <section class="hero">

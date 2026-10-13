@@ -516,7 +516,7 @@ export class DexieService extends Dexie {
     return {
       app: 'kanetracker', version: 2, exportedAt: new Date().toISOString(),
       transactions, categories, recurring, budgets, trips,
-      settings: settings.filter(s => !SECRET_KEYS.has(s.key) && s.key !== 'lastBackup'),
+      settings: settings.filter(s => !SECRET_KEYS.has(s.key) && s.key !== 'lastBackup' && s.key !== 'lastBackupCount'),
     };
   }
 

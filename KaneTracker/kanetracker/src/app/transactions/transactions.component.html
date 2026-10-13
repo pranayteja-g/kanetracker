@@ -1,13 +1,40 @@
 <div class="page" *ngIf="loaded">
   <header class="top">
     <h1>History</h1>
-    <button class="icon-btn" (click)="search()" aria-label="Search"><mat-icon>search</mat-icon></button>
+    <span class="hb">
+      <button class="icon-btn fbtn" (click)="showF = !showF" aria-label="Filters" [class.on]="showF || active"><mat-icon>tune</mat-icon><b *ngIf="active">{{ active }}</b></button>
+      <button class="icon-btn" (click)="search()" aria-label="Search"><mat-icon>search</mat-icon></button>
+    </span>
   </header>
 
   <ng-container *ngIf="hasAny; else empty">
     <div class="chips">
       <button *ngFor="let f of filters" class="chip" [class.on]="f.v === filter" (click)="setFilter(f.v)">{{ f.l }}</button>
     </div>
+
+    <div class="chips" *ngIf="presets.length">
+      <span class="chip pre" *ngFor="let p of presets"><button (click)="usePreset(p)">{{ p.name }}</button><button class="x" (click)="delPreset(p)" aria-label="Delete preset">×</button></span>
+    </div>
+
+    <section class="fpanel" *ngIf="showF">
+      <div class="g2">
+        <label><span class="label">Category</span><select [(ngModel)]="f.cat" (ngModelChange)="changed()"><option value="">Any</option><option *ngFor="let c of opts.cats" [value]="c">{{ c }}</option></select></label>
+        <label><span class="label">Account</span><select [(ngModel)]="f.acc" (ngModelChange)="changed()"><option value="">Any</option><option *ngFor="let a of opts.accs" [value]="a">{{ a }}</option></select></label>
+        <label><span class="label">Tag</span><select [(ngModel)]="f.tag" (ngModelChange)="changed()"><option value="">Any</option><option *ngFor="let t of opts.tags" [value]="t">#{{ t }}</option></select></label>
+        <label><span class="label">Trip</span><select [(ngModel)]="f.trip" (ngModelChange)="changed()"><option [ngValue]="0">Any</option><option *ngFor="let t of opts.trips" [ngValue]="t.id">{{ t.name }}</option></select></label>
+        <label><span class="label">Min amount</span><input type="number" inputmode="decimal" min="0" [(ngModel)]="f.min" (ngModelChange)="changed()" /></label>
+        <label><span class="label">Max amount</span><input type="number" inputmode="decimal" min="0" [(ngModel)]="f.max" (ngModelChange)="changed()" /></label>
+        <label><span class="label">From</span><input type="date" [(ngModel)]="f.from" (ngModelChange)="changed()" /></label>
+        <label><span class="label">To</span><input type="date" [(ngModel)]="f.to" (ngModelChange)="changed()" /></label>
+      </div>
+      <div class="frow">
+        <button class="btn ghost" (click)="clearF()" [disabled]="!active">Clear</button>
+        <button class="btn ghost" (click)="savePreset()" [disabled]="!active && filter === 'all'">Save as preset</button>
+      </div>
+    </section>
+
+    <p class="muted fsum" *ngIf="active || filter !== 'all'">{{ count }} entr{{ count === 1 ? 'y' : 'ies' }}<ng-container *ngIf="total"> · −{{ total | inr }}</ng-container></p>
+    <p class="none muted" *ngIf="!groups.length">No entries match.</p>
 
     <section class="day" *ngFor="let g of groups">
       <div class="day-h"><h2>{{ g.label }}</h2><span class="muted" *ngIf="g.spent">−{{ g.spent | inr }}</span></div>

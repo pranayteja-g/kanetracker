@@ -16,3 +16,16 @@
 .dup { flex: none; width: 36px; height: 36px; border: 0; background: none; color: var(--k-muted); display: grid; place-items: center; border-radius: 50%; }
 .dup mat-icon { font-size: 18px; width: 18px; height: 18px; }
 .dup:active { background: var(--k-line); }
+
+.hb { display: flex; gap: 4px; }
+.fbtn { position: relative; } .fbtn.on { color: var(--k-accent); }
+.fbtn b { position: absolute; top: 2px; right: 2px; min-width: 16px; height: 16px; border-radius: 8px; background: var(--k-accent); color: #fff; font-size: 11px; display: grid; place-items: center; }
+.pre { display: inline-flex; padding: 0; overflow: hidden; }
+.pre button { border: 0; background: none; color: inherit; font: inherit; padding: 0 10px; min-height: 36px; }
+.pre .x { padding: 0 10px 0 0; opacity: .6; }
+.fpanel { margin-top: 12px; padding: 12px; border: 1px solid var(--k-line); border-radius: 14px; }
+.g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.g2 label { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.g2 select, .g2 input { min-height: 44px; padding: 0 10px; border: 1px solid var(--k-line); border-radius: 10px; background: var(--k-surface); color: var(--k-ink); font: inherit; font-size: 16px; width: 100%; box-sizing: border-box; }
+.frow { display: flex; gap: 8px; margin-top: 12px; } .frow .btn { flex: 1; min-height: 44px; }
+.fsum { margin: 12px 0 0; }

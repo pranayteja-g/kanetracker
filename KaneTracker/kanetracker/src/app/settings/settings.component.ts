@@ -37,7 +37,7 @@ import { download, toCsv, toInput } from '../shared/utils';
           <button class="btn ghost" (click)="exportCsv()"><mat-icon>table_chart</mat-icon>CSV</button>
           <label class="btn ghost"><mat-icon>restore</mat-icon>Restore<input type="file" accept=".json,.csv,application/json,text/csv" hidden (change)="restore($event)" /></label>
         </div>
-        <p class="muted">JSON = full backup (restore replaces everything). CSV = transactions only.</p>
+        <p class="muted">JSON = full backup (restore replaces everything). CSV = transactions only (does not count as a backup).</p>
       </section>
 
       <section class="sec">
@@ -225,15 +225,16 @@ export class SettingsComponent implements OnInit {
 
   async exportCsv() {
     const txs = await this.db.getTransactionsNewestFirst();
-    const rows: (string | number | undefined)[][] = [['Date', 'Type', 'Category', 'Amount', 'Description', 'Account', 'Tags', 'Currency', 'OrigAmount', 'Rate']];
-    for (const t of txs) rows.push([toInput(new Date(t.date)), t.type, t.category, t.amount, t.description, t.account, (t.tags || []).join(' '), t.currency, t.origAmount, t.rate]);
+    const rows: (string | number | undefined)[][] = [['Date', 'Type', 'Category', 'Amount', 'Description', 'Account', 'Tags', 'Currency', 'OrigAmount', 'Rate', 'Trip']];
+    const tripName = new Map((await this.db.getTrips()).map(t => [t.id, t.name]));
+    for (const t of txs) rows.push([toInput(new Date(t.date)), t.type, t.category, t.amount, t.description, t.account, (t.tags || []).join(' '), t.currency, t.origAmount, t.rate, t.tripId ? tripName.get(t.tripId) : undefined]);
     download(`kanetracker-${toInput(new Date())}.csv`, 'text/csv', toCsv(rows));
-    await this.markBackup();
   }
 
   private async markBackup() {
     const now = new Date().toISOString();
     await this.db.setSetting('lastBackup', now);
+    await this.db.setSetting('lastBackupCount', await this.db.transactions.count());
     this.lastBackup = new Date(now).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
     this.stale = false;
   }

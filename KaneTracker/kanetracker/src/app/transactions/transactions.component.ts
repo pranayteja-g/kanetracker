@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { NgFor, NgIf } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
@@ -9,14 +10,17 @@ import { Transaction } from '../models/transaction.interface';
 import { TransactionDetailDialogComponent } from '../transaction-detail-dialog/transaction-detail-dialog.component';
 import { InrPipe } from '../shared/inr.pipe';
 import { SwipeRowDirective } from '../shared/swipe-row.directive';
+import { Trip } from '../models/trip.interface';
+import { EMPTY_FILTER, HFilter, passes } from '../shared/history-filter';
 
 type Filter = 'all' | 'expense' | 'income';
+export interface Preset { name: string; type: Filter; f: HFilter }
 interface Group { label: string; spent: number; items: Transaction[] }
 
 @Component({
   selector: 'app-transactions',
   standalone: true,
-  imports: [NgFor, NgIf, RouterLink, MatIconModule, InrPipe, SwipeRowDirective],
+  imports: [NgFor, NgIf, FormsModule, RouterLink, MatIconModule, InrPipe, SwipeRowDirective],
   templateUrl: './transactions.component.html',
   styleUrls: ['./transactions.component.css'],
 })
@@ -30,6 +34,12 @@ export class TransactionsComponent implements OnInit {
   groups: Group[] = [];
   loaded = false;
   hasAny = false;
+  f: HFilter = EMPTY_FILTER();
+  showF = false;
+  presets: Preset[] = [];
+  opts = { cats: [] as string[], accs: [] as string[], tags: [] as string[], trips: [] as Trip[] };
+  count = 0;
+  total = 0;
 
   private all: Transaction[] = [];
   private view: Transaction[] = [];
@@ -48,6 +58,12 @@ export class TransactionsComponent implements OnInit {
     const [txs, cats] = await Promise.all([this.db.getTransactionsNewestFirst(), this.db.getAllCategories()]);
     this.all = txs;
     this.hasAny = txs.length > 0;
+    const uniq = (a: (string | undefined)[]) => [...new Set(a.filter((x): x is string => !!x))].sort((x, y) => x.localeCompare(y));
+    this.opts = {
+      cats: uniq(txs.map(t => t.category)), accs: uniq(txs.map(t => t.account)), tags: uniq(txs.flatMap(t => t.tags || [])),
+      trips: await this.db.getTrips(),
+    };
+    this.presets = await this.db.getSetting<Preset[]>('historyPresets', []);
     cats.forEach(c => this.colors.set(c.name, c.color));
     this.apply();
   }
@@ -105,8 +121,43 @@ export class TransactionsComponent implements OnInit {
     this.router.navigate(['/search']);
   }
 
+  get active() {
+    const f = this.f;
+    return [f.cat, f.acc, f.tag, f.trip, f.min, f.max, f.from, f.to].filter(v => v !== '' && v !== 0 && v !== null && v !== undefined).length;
+  }
+
+  changed() {
+    this.limit = this.step;
+    this.apply();
+  }
+
+  clearF() {
+    this.f = EMPTY_FILTER();
+    this.changed();
+  }
+
+  async savePreset() {
+    const name = (prompt('Name this filter') || '').trim().slice(0, 30);
+    if (!name) return;
+    this.presets = [...this.presets.filter(p => p.name !== name), { name, type: this.filter, f: { ...this.f } }];
+    await this.db.setSetting('historyPresets', this.presets);
+  }
+
+  usePreset(p: Preset) {
+    this.filter = p.type;
+    this.f = { ...EMPTY_FILTER(), ...p.f };
+    this.changed();
+  }
+
+  async delPreset(p: Preset) {
+    this.presets = this.presets.filter(x => x.name !== p.name);
+    await this.db.setSetting('historyPresets', this.presets);
+  }
+
   private apply() {
-    this.view = this.filter === 'all' ? this.all : this.all.filter(t => t.type === this.filter);
+    this.view = this.all.filter(t => (this.filter === 'all' || t.type === this.filter) && passes(t, this.f));
+    this.count = this.view.length;
+    this.total = this.view.reduce((s, t) => s + (t.type === 'expense' ? t.amount : 0), 0);
     this.build();
   }
 

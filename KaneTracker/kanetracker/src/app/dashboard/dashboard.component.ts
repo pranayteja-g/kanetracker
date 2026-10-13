@@ -46,6 +46,7 @@ export class DashboardComponent implements OnInit {
   budgets: BudgetRow[] = [];
   tripCards: TripCard[] = [];
   staleBackup = false;
+  newSinceBackup = 0;
   insights: Insight[] = [];
   suggestions: RecurringSuggestion[] = [];
   private dismissed = new Set<string>();
@@ -56,14 +57,18 @@ export class DashboardComponent implements OnInit {
   constructor(private db: DexieService, private snack: MatSnackBar) {}
 
   async ngOnInit() {
-    const [txs, cats, buds, lb] = await Promise.all([
+    const [txs, cats, buds, lb, lbCount] = await Promise.all([
       this.db.getTransactionsNewestFirst(), this.db.getAllCategories(), this.db.budgets.toArray(),
       this.db.getSetting<string>('lastBackup', ''),
+      this.db.getSetting<number>('lastBackupCount', 0),
     ]);
     this.all = txs.map(t => ({ ...t, t: new Date(t.date).getTime() }));
     cats.forEach(c => this.colors.set(c.name, c.color));
     this.hasAny = this.all.length > 0;
-    this.staleBackup = this.all.length >= 10 && (!lb || Date.now() - new Date(lb).getTime() > 30 * 864e5);
+    const age = lb ? (Date.now() - new Date(lb).getTime()) / 864e5 : Infinity;
+    this.newSinceBackup = Math.max(0, this.all.length - (lbCount || 0));
+    // never backed up, 30+ days old, or lots of new entries (2+ weeks old, or 50+ entries any time)
+    this.staleBackup = this.all.length >= 10 && (!lb || age > 30 || this.newSinceBackup >= 50 || (age > 14 && this.newSinceBackup >= 15));
     this.budgets = this.buildBudgets(buds);
     this.compute();
     try {
