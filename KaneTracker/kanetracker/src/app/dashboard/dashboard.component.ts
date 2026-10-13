@@ -12,6 +12,8 @@ import { TripSummary, summarizeTrip, tripStatus } from '../shared/trips';
 import { Trip } from '../models/trip.interface';
 import { computeBalances, totals } from '../shared/splits';
 import { accountFlows, balances } from '../shared/accounts';
+import { CardInfo, nextDue } from '../shared/cards';
+import { Goal } from '../shared/goals';
 
 interface TripCard { id: number; name: string; s: TripSummary; row: BudgetRow }
 
@@ -48,6 +50,8 @@ export class DashboardComponent implements OnInit {
   budgets: BudgetRow[] = [];
   tripCards: TripCard[] = [];
   acctTotal: number | null = null;
+  dues: { account: string; days: number; owed: number }[] = [];
+  goalsLine = '';
   owe = { owedToMe: 0, iOwe: 0 };
   staleBackup = false;
   newSinceBackup = 0;
@@ -82,7 +86,17 @@ export class DashboardComponent implements OnInit {
       if (Object.keys(op).length) {
         const fl = accountFlows(txs, tr);
         const names = new Set([...list, ...Object.keys(op), ...Object.keys(fl)]);
-        this.acctTotal = Object.values(balances([...names], op, fl)).reduce((s, v) => s + v, 0);
+        const bal = balances([...names], op, fl);
+        this.acctTotal = Object.values(bal).reduce((s, v) => s + v, 0);
+        const cards = await this.db.getSetting<CardInfo[]>('cards', []);
+        const now2 = new Date();
+        this.dues = cards.map(c => ({ account: c.account, days: nextDue(c.dueDay, now2).days, owed: -(bal[c.account] || 0) }))
+          .filter(d => d.owed > 0 && d.days <= 7).sort((a, b) => a.days - b.days);
+      }
+      const goals = await this.db.getSetting<Goal[]>('goals', []);
+      if (goals.length) {
+        const sum = goals.reduce((s, g) => s + g.saved.reduce((x, c) => x + c.amount, 0), 0);
+        this.goalsLine = `${goals.length} goal${goals.length === 1 ? '' : 's'} · ${fmtMoney(sum)} saved`;
       }
     } catch { /* never block Home */ }
     try {

@@ -42,7 +42,8 @@ function dailyRate(txs: Transaction[], now: Date, days: number, pick: (t: Transa
   const start = end - days * DAY;
   const daily = new Array<number>(days).fill(0);
   for (const t of txs) {
-    if (t.type !== 'expense' || t.recurringId || !pick(t)) continue;
+    // trip spending is not "everyday" pace: keep it out of rates so a holiday doesn't skew forecasts
+    if (t.type !== 'expense' || t.recurringId || t.tripId || !pick(t)) continue;
     const ts = day0(new Date(t.date)).getTime();
     if (ts >= start && ts < end) daily[Math.round((ts - start) / DAY)] += t.amount;
   }
@@ -80,7 +81,7 @@ export function forecastMonth(txs: Transaction[], rules: Recurring[], now: Date)
   const dim = new Date(y, m + 1, 0).getDate();
   const daysLeft = dim - now.getDate();
 
-  const recent = exp.filter(t => day0(new Date(t.date)).getTime() >= day0(now).getTime() - 28 * DAY && !t.recurringId);
+  const recent = exp.filter(t => day0(new Date(t.date)).getTime() >= day0(now).getTime() - 28 * DAY && !t.recurringId && !t.tripId);
   const first = exp.length ? Math.min(...exp.map(t => new Date(t.date).getTime())) : Infinity;
   const ok = recent.length >= 8 && first <= day0(now).getTime() - 14 * DAY;
   if (!ok) return { ok, mtd, projected: mtd, low: mtd, high: mtd, lastMonth, daysLeft };
@@ -96,7 +97,7 @@ export interface Anomaly { tx: Transaction; typical: number; ratio: number }
 
 export function findAnomalies(txs: Transaction[], now: Date, lookbackDays = 14): Anomaly[] {
   const since = day0(now).getTime() - lookbackDays * DAY;
-  const hist = txs.filter(t => t.type === 'expense' && !t.recurringId && day0(new Date(t.date)).getTime() >= day0(now).getTime() - 180 * DAY);
+  const hist = txs.filter(t => t.type === 'expense' && !t.recurringId && !t.tripId && day0(new Date(t.date)).getTime() >= day0(now).getTime() - 180 * DAY);
   const byCat = new Map<string, Transaction[]>();
   hist.forEach(t => byCat.set(t.category, [...(byCat.get(t.category) || []), t]));
   const out: Anomaly[] = [];
@@ -144,7 +145,7 @@ export function biggestTrend(txs: Transaction[], now: Date): { up?: Trend; down?
   const cur = new Map<string, number>(), prev = new Map<string, number>();
   let prevMonthTotal = 0;
   for (const t of txs) {
-    if (t.type !== 'expense') continue;
+    if (t.type !== 'expense' || t.tripId) continue;
     const dt = new Date(t.date);
     if (dt.getFullYear() === y && dt.getMonth() === m && dt.getDate() <= d) cur.set(t.category, (cur.get(t.category) || 0) + t.amount);
     if (dt.getFullYear() === pm.getFullYear() && dt.getMonth() === pm.getMonth()) {

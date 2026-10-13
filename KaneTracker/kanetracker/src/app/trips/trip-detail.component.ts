@@ -11,7 +11,8 @@ import { Transaction } from '../models/transaction.interface';
 import { TripSummary, summarizeTrip } from '../shared/trips';
 import { InrPipe } from '../shared/inr.pipe';
 import { fmtMoney, getBase } from '../shared/currency';
-import { fromInput, toInput } from '../shared/utils';
+import { download, fromInput, toCsv, toInput } from '../shared/utils';
+import { tripReportRows } from '../shared/trips';
 import { TransactionDetailDialogComponent } from '../transaction-detail-dialog/transaction-detail-dialog.component';
 
 @Component({
@@ -24,6 +25,7 @@ import { TransactionDetailDialogComponent } from '../transaction-detail-dialog/t
         <button class="icon-btn" (click)="back()" aria-label="Back"><mat-icon>arrow_back</mat-icon></button>
         <h1>{{ trip.name }}</h1>
         <a class="icon-btn" [routerLink]="['/trips', trip.id, 'edit']" aria-label="Edit trip"><mat-icon>edit</mat-icon></a>
+ <button class="icon-btn" (click)="exportReport()" aria-label="Export report (CSV)"><mat-icon>download</mat-icon></button>
         <button class="icon-btn" (click)="dupOpen = !dupOpen" aria-label="Copy plan to new dates"><mat-icon>content_copy</mat-icon></button>
         <button class="icon-btn" (click)="remove()" aria-label="Delete trip"><mat-icon>delete_outline</mat-icon></button>
       </header>
@@ -188,6 +190,12 @@ export class TripDetailComponent implements OnInit {
     const next = new Date(Math.max(Date.now(), end.getTime() + 864e5));
     this.dupDate = toInput(next);
     this.loaded = true;
+  }
+
+  exportReport() {
+    if (!this.trip || !this.s) return;
+    const slug = this.trip.name.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').toLowerCase() || 'trip';
+    download(`trip-${slug}-${toInput(new Date())}.csv`, 'text/csv', toCsv(tripReportRows(this.trip, this.s, this.txs)));
   }
 
   back() { history.length > 1 ? history.back() : this.router.navigate(['/trips']); }

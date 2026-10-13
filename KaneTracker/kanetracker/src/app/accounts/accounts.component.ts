@@ -8,6 +8,7 @@ import { DEFAULT_ACCOUNTS, DexieService } from '../services/dexie.service';
 import { InrPipe } from '../shared/inr.pipe';
 import { Transfer, accountFlows, balances } from '../shared/accounts';
 import { toInput } from '../shared/utils';
+import { CardInfo, nextDue } from '../shared/cards';
 
 interface Row { name: string; bal: number }
 
@@ -31,14 +32,17 @@ interface Row { name: string; bal: number }
       <section class="sec">
         <div class="row-h"><h2>Balances</h2></div>
         <div class="a" *ngFor="let r of rows">
-          <button class="ah" (click)="edit = edit === r.name ? '' : r.name; cur = null">
-            <span class="nm">{{ r.name }}</span><b [class.neg]="r.bal < 0">{{ r.bal < 0 ? '−' : '' }}{{ abs(r.bal) | inr }}</b>
+          <button class="ah" (click)="edit = edit === r.name ? '' : r.name; cur = null; dueIn = dueOf(r.name)">
+            <span class="nm">{{ r.name }}<small class="muted" *ngIf="dueText(r.name)"> · {{ dueText(r.name) }}</small></span><b [class.neg]="r.bal < 0">{{ r.bal < 0 ? '−' : '' }}{{ abs(r.bal) | inr }}</b>
           </button>
           <div class="ad" *ngIf="edit === r.name">
             <label class="label">Set current balance</label>
             <div class="row2"><input type="number" inputmode="decimal" step="any" [(ngModel)]="cur" [placeholder]="r.bal + ''" />
               <button class="btn" (click)="setBal(r)" [disabled]="cur === null">Save</button></div>
             <p class="muted">Enter what the account holds right now. Entries and transfers adjust it from here.</p>
+            <label class="label">Credit card? Payment due day of month</label>
+            <div class="row2"><input type="number" inputmode="numeric" min="1" max="31" step="1" [(ngModel)]="dueIn" placeholder="e.g. 20 (empty = not a card)" />
+              <button class="btn" (click)="saveDue(r)">Save</button></div>
           </div>
         </div>
       </section>
@@ -74,7 +78,7 @@ interface Row { name: string; bal: number }
     .a { border-bottom: 1px solid var(--k-line); }
     .ah { display: flex; justify-content: space-between; width: 100%; padding: 14px 0; border: 0; background: none; color: inherit; font: inherit; }
     .ah b { font-weight: 500; font-variant-numeric: tabular-nums; } .neg { color: var(--k-neg, #dc2626); }
-    .ad { padding-bottom: 12px; }
+    .ad { padding-bottom: 12px; } .ad .label { display: block; margin-top: 12px; }
     .row2 { display: flex; gap: 8px; align-items: center; margin: 8px 0; }
     .row2 input, .row2 select { flex: 1; min-width: 0; min-height: 48px; padding: 0 12px; border: 1px solid var(--k-line); border-radius: 12px; background: var(--k-surface); color: var(--k-ink); font: inherit; font-size: 16px; box-sizing: border-box; }
     .row2 .btn { min-height: 48px; padding: 0 16px; } .full { width: 100%; }
@@ -96,6 +100,8 @@ export class AccountsComponent implements OnInit {
   noAcc = 0;
   edit = '';
   cur: number | null = null;
+  dueIn: number | null = null;
+  cards: CardInfo[] = [];
   transfers: Transfer[] = [];
   from = '';
   to = '';
@@ -115,6 +121,7 @@ export class AccountsComponent implements OnInit {
       this.db.getSetting<Transfer[]>('transfers', []), this.db.getAllTransactions(),
     ]);
     this.opening = opening;
+    this.cards = await this.db.getSetting<CardInfo[]>('cards', []);
     this.transfers = [...transfers].sort((a, b) => b.date.localeCompare(a.date));
     this.flows = accountFlows(txs, transfers);
     const set = new Set<string>(list);
@@ -125,6 +132,24 @@ export class AccountsComponent implements OnInit {
     this.total = Math.round(this.rows.reduce((s, r) => s + r.bal, 0) * 100) / 100;
     this.noAcc = txs.filter(t => !t.account).length;
     if (!this.from) { this.from = this.names[0] || ''; this.to = this.names[1] || ''; }
+  }
+
+  dueOf(name: string): number | null { return this.cards.find(c => c.account === name)?.dueDay ?? null; }
+
+  dueText(name: string): string {
+    const d = this.dueOf(name);
+    if (!d) return '';
+    const n = nextDue(d, new Date());
+    return `due ${n.date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}${n.days <= 7 ? ' (' + (n.days === 0 ? 'today' : 'in ' + n.days + 'd') + ')' : ''}`;
+  }
+
+  async saveDue(r: Row) {
+    const v = this.dueIn === null || this.dueIn === undefined || (this.dueIn as any) === '' ? null : Math.round(Number(this.dueIn));
+    if (v !== null && !(v >= 1 && v <= 31)) { this.snack.open('Day must be 1 to 31', 'OK', { duration: 2500 }); return; }
+    const rest = this.cards.filter(c => c.account !== r.name);
+    await this.db.setSetting('cards', v === null ? rest : [...rest, { account: r.name, dueDay: v }]);
+    this.edit = '';
+    await this.load();
   }
 
   async setBal(r: Row) {

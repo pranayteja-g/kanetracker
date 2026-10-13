@@ -26,6 +26,9 @@
       </div>
     </section>
 
+    <a routerLink="/accounts" class="nudge warn" *ngFor="let d of dues"><mat-icon>credit_card</mat-icon>
+      <span>{{ d.account }} bill {{ fmt(d.owed) }} due {{ d.days === 0 ? 'today' : 'in ' + d.days + ' day' + (d.days === 1 ? '' : 's') }}</span></a>
+    <a routerLink="/goals" class="nudge" *ngIf="goalsLine"><mat-icon>flag</mat-icon><span>{{ goalsLine }}</span></a>
     <a routerLink="/accounts" class="nudge" *ngIf="acctTotal !== null"><mat-icon>account_balance_wallet</mat-icon><span>In accounts: {{ acctTotal < 0 ? '−' : '' }}{{ fmt(acctTotal < 0 ? -acctTotal : acctTotal) }}</span></a>
 
     <a routerLink="/people" class="nudge" *ngIf="owe.owedToMe > 0 || owe.iOwe > 0"><mat-icon>group</mat-icon>

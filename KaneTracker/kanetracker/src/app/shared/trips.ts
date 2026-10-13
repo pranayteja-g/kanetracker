@@ -205,3 +205,18 @@ export function splitTotal(total: number, cats: string[], weights: Record<string
   cats.forEach((c, i) => (out[c] = base[i] / 100));
   return out;
 }
+
+/** Rows for a CSV trip report: summary, per-category plan vs actual, then every linked expense. */
+export function tripReportRows(t: Trip, s: TripSummary, txs: Transaction[]): (string | number | undefined)[][] {
+  const day = (iso: string) => iso.slice(0, 10);
+  const rows: (string | number | undefined)[][] = [
+    ['Trip', t.name], ['Dates', `${day(t.start)} to ${day(t.end)}`], ['Days', s.days],
+    ['Planned', s.planned], ['Spent', s.spent], ['Left', s.left], ['Per day (plan)', round2(s.perDayPlan)],
+    [], ['Category', 'Planned', 'Spent', 'Left'],
+  ];
+  for (const r of s.rows) rows.push([r.category, r.planned, r.spent, r.left]);
+  rows.push([], ['Date', 'Category', 'Amount', 'Note', 'Account', 'Original']);
+  for (const x of [...txs].sort((a, b) => a.date.localeCompare(b.date)))
+    rows.push([new Date(x.date).toLocaleDateString('en-CA'), x.category, x.amount, x.description, x.account, x.currency && x.origAmount ? `${x.origAmount} ${x.currency}` : undefined]);
+  return rows;
+}

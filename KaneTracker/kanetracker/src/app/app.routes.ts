@@ -18,6 +18,8 @@ export const routes: Routes = [
       { path: 'budgets', loadComponent: () => import('./budgets/budgets.component').then(m => m.BudgetsComponent) },
       { path: 'import', loadComponent: () => import('./import/import.component').then(m => m.ImportComponent) },
       { path: 'summary', loadComponent: () => import('./summary/summary.component').then(m => m.SummaryComponent) },
+      { path: 'goals', loadComponent: () => import('./goals/goals.component').then(m => m.GoalsComponent) },
+      { path: 'year', loadComponent: () => import('./year/year.component').then(m => m.YearComponent) },
       { path: 'accounts', loadComponent: () => import('./accounts/accounts.component').then(m => m.AccountsComponent) },
       { path: 'people', loadComponent: () => import('./people/people.component').then(m => m.PeopleComponent) },
       { path: 'trips', loadComponent: () => import('./trips/trips.component').then(m => m.TripsComponent) },
