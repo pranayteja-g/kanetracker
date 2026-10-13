@@ -33,3 +33,4 @@
 .fields .file { cursor: pointer; }
 .fields .file span { flex: 1; font-size: 16px; }
 .fields .file img { height: 36px; width: 36px; object-fit: cover; border-radius: 8px; }
+.tic { font-size: 16px; width: 16px; height: 16px; margin-right: 4px; }

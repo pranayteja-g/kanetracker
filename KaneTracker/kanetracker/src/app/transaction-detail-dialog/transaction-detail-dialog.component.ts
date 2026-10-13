@@ -6,6 +6,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { DEFAULT_ACCOUNTS, DexieService } from '../services/dexie.service';
 import { Transaction } from '../models/transaction.interface';
+import { Trip } from '../models/trip.interface';
 import { Category } from '../models/category.interface';
 import { InrPipe } from '../shared/inr.pipe';
 import { getBase } from '../shared/currency';
@@ -34,6 +35,7 @@ const iso = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.ge
           <ng-container *ngIf="tx.currency"><dt>Original</dt><dd>{{ sym(tx.currency) }}{{ tx.origAmount }} &#64; {{ tx.rate }}</dd></ng-container>
           <ng-container *ngIf="tx.account"><dt>Account</dt><dd>{{ tx.account }}</dd></ng-container>
           <ng-container *ngIf="tx.tags?.length"><dt>Tags</dt><dd>#{{ tx.tags!.join(' #') }}</dd></ng-container>
+          <ng-container *ngIf="tripName"><dt>Trip</dt><dd>{{ tripName }}</dd></ng-container>
           <ng-container *ngIf="tx.recurringId"><dt>Repeats</dt><dd>Recurring entry</dd></ng-container>
         </dl>
         <img class="rcpt" *ngIf="tx.receipt" [src]="tx.receipt" alt="Receipt" (click)="zoom = !zoom" [class.zoom]="zoom" />
@@ -61,6 +63,11 @@ const iso = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.ge
           <select [(ngModel)]="f.account">
             <option value="">None</option>
             <option *ngFor="let a of accounts" [value]="a">{{ a }}</option>
+          </select></label>
+        <label *ngIf="f.type === 'expense' && trips.length"><span class="label">Trip</span>
+          <select [(ngModel)]="f.tripId">
+            <option [ngValue]="0">None</option>
+            <option *ngFor="let t of trips" [ngValue]="t.id">{{ t.name }}</option>
           </select></label>
         <label><span class="label">Tags</span><input type="text" [(ngModel)]="f.tags" placeholder="trip, work" autocapitalize="none" /></label>
         <div class="rfield">
@@ -105,7 +112,8 @@ export class TransactionDetailDialogComponent implements OnInit {
   edit = false;
   saving = false;
   cats: Category[] = [];
-  f = { type: 'expense' as 'income' | 'expense', amount: null as number | null, category: '', date: '', description: '', account: '', tags: '', receipt: '' };
+  f = { type: 'expense' as 'income' | 'expense', amount: null as number | null, category: '', date: '', description: '', account: '', tags: '', receipt: '', tripId: 0 };
+  trips: Trip[] = [];
   accounts: string[] = [];
   zoom = false;
   sym = symbol;
@@ -124,7 +132,12 @@ export class TransactionDetailDialogComponent implements OnInit {
   async ngOnInit() {
     this.all = await this.db.getAllCategories();
     this.accounts = await this.db.getSetting('accounts', DEFAULT_ACCOUNTS);
+    this.trips = await this.db.getTrips();
     if (this.data.edit) this.startEdit();
+  }
+
+  get tripName() {
+    return this.tx.tripId ? this.trips.find(t => t.id === this.tx.tripId)?.name ?? '' : '';
   }
 
   get valid() {
@@ -136,7 +149,7 @@ export class TransactionDetailDialogComponent implements OnInit {
     this.f = {
       type: t.type, amount: t.currency ? t.origAmount ?? t.amount : t.amount, category: t.category,
       date: iso(new Date(t.date)), description: t.description || '', account: t.account || '',
-      tags: (t.tags || []).join(', '), receipt: t.receipt || '',
+      tags: (t.tags || []).join(', '), receipt: t.receipt || '', tripId: t.tripId || 0,
     };
     this.cats = this.all.filter(c => c.type === t.type);
     this.edit = true;
@@ -163,6 +176,7 @@ export class TransactionDetailDialogComponent implements OnInit {
         row.description = this.f.description.trim();
         if (row.currency && row.rate) { row.origAmount = entered; row.amount = round2(entered * row.rate); }
         else row.amount = entered;
+        this.f.type === 'expense' && this.f.tripId ? (row.tripId = this.f.tripId) : delete row.tripId;
         this.f.account ? (row.account = this.f.account) : delete row.account;
         tags.length ? (row.tags = tags) : delete row.tags;
         this.f.receipt ? (row.receipt = this.f.receipt) : delete row.receipt;

@@ -2,6 +2,7 @@
   <header class="top">
     <h1>Kanetracker</h1>
     <span class="hb">
+      <a routerLink="/trips" class="icon-btn" aria-label="Trips"><mat-icon>luggage</mat-icon></a>
       <a routerLink="/summary" class="icon-btn" aria-label="Monthly summary"><mat-icon>calendar_month</mat-icon></a>
       <a routerLink="/settings" class="icon-btn" aria-label="Settings"><mat-icon>settings</mat-icon></a>
     </span>
@@ -25,6 +26,16 @@
       </div>
     </section>
 
+    <section class="sec" *ngFor="let c of tripCards">
+      <div class="row-h"><h2><mat-icon class="tic">luggage</mat-icon>{{ c.name }}</h2><a [routerLink]="['/trips', c.id]">Open</a></div>
+      <p class="muted">Day {{ c.s.dayNo }} of {{ c.s.days }}</p>
+      <div class="split">
+        <div><span class="label">Today left</span><b [class.over]="c.s.todayLeft < 0">{{ c.s.todayLeft | inr }}</b></div>
+        <div><span class="label">Trip left</span><b [class.over]="c.s.left < 0">{{ c.s.left | inr }}</b></div>
+      </div>
+      <a class="btn tripadd" [routerLink]="['/transaction-form']" [queryParams]="{ trip: c.id }">+ Expense</a>
+    </section>
+
     <section class="sec" *ngIf="insights.length">
       <div class="row-h"><h2>Insights</h2></div>
       <p class="ins" *ngFor="let i of insights" [class.warn]="i.level === 'warn'"><mat-icon>{{ icon(i) }}</mat-icon><span>{{ i.text }}</span></p>
@@ -39,8 +50,13 @@
       </div>
     </section>
 
-    <section class="sec" *ngIf="budgets.length">
+    <section class="sec" *ngIf="budgets.length || tripRows.length">
       <div class="row-h"><h2>Budgets · this month</h2><a routerLink="/budgets">Edit</a></div>
+      <div class="cat" *ngFor="let b of tripRows">
+        <div class="cat-h"><span><mat-icon class="tic">luggage</mat-icon>{{ b.name }}</span>
+          <b [class.over]="b.over">{{ b.spent | inr }} / {{ b.limit | inr }}</b></div>
+        <div class="bar"><div [style.width.%]="b.pct" [style.background]="b.over ? '#dc2626' : b.pct >= 80 ? '#f59e0b' : b.color"></div></div>
+      </div>
       <div class="cat" *ngFor="let b of budgets">
         <div class="cat-h"><span><i [style.background]="b.color"></i>{{ b.name }}</span>
           <b [class.over]="b.over">{{ b.spent | inr }} / {{ b.limit | inr }}</b></div>

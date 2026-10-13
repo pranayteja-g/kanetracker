@@ -21,6 +21,7 @@
               <span *ngIf="t.description || t.account || t.tags?.length">{{ t.description }}<ng-container *ngIf="t.account"> · {{ t.account }}</ng-container><ng-container *ngFor="let tg of t.tags"> #{{ tg }}</ng-container></span></span>
             <mat-icon class="mini" *ngIf="t.receipt">photo_camera</mat-icon>
             <mat-icon class="mini" *ngIf="t.recurringId">repeat</mat-icon>
+            <mat-icon class="mini" *ngIf="t.tripId">luggage</mat-icon>
             <span class="a" [class.income]="t.type === 'income'">{{ t.type === 'income' ? '+' : '−' }}{{ t.amount | inr }}</span>
           </button>
           <button class="dup" (click)="dup(t)" aria-label="Duplicate"><mat-icon>content_copy</mat-icon></button>

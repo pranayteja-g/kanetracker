@@ -1,7 +1,7 @@
 import { AfterViewInit, Component, ElementRef, OnInit, ViewChild, inject } from '@angular/core';
 import { NgFor, NgIf } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -10,6 +10,8 @@ import { CategoryDialogComponent } from '../category-dialog/category-dialog.comp
 import { Category } from '../models/category.interface';
 import { Freq, Recurring } from '../models/recurring.interface';
 import { Transaction } from '../models/transaction.interface';
+import { Trip } from '../models/trip.interface';
+import { tripStatus, tripsOnDate } from '../shared/trips';
 import { DEFAULT_ACCOUNTS, DexieService, advance } from '../services/dexie.service';
 import { InrPipe } from '../shared/inr.pipe';
 import { compressImage, fromInput, parseTags, round2, symbol, toInput } from '../shared/utils';
@@ -30,6 +32,7 @@ export class TransactionFormComponent implements OnInit, AfterViewInit {
   private fb = inject(FormBuilder);
   private db = inject(DexieService);
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
   private dialog = inject(MatDialog);
   private snack = inject(MatSnackBar);
 
@@ -55,6 +58,9 @@ export class TransactionFormComponent implements OnInit, AfterViewInit {
   rates: Record<string, number> = {};
   presets: number[] = presetsFor(getBase());
   receipt = '';
+  trips: Trip[] = [];
+  tripId = 0;
+  private baseRates: Record<string, number> = {};
   autoPicked = false;
   private manual = false;
   private clf?: ReturnType<typeof buildClassifier>;
@@ -78,6 +84,33 @@ export class TransactionFormComponent implements OnInit, AfterViewInit {
     return currency !== this.base && amount && this.rates[currency] ? round2(amount * this.rates[currency]) : null;
   }
 
+  get trip(): Trip | undefined {
+    return this.tripId ? this.trips.find(t => t.id === this.tripId) : undefined;
+  }
+
+  /** Select (or clear) the trip. A foreign-currency trip switches the entry currency and uses its rate. */
+  setTrip(id: number) {
+    const next = this.tripId === id ? 0 : id;
+    const prev = this.trip;
+    this.tripId = next;
+    this.rates = { ...this.baseRates };
+    const t = this.trip;
+    if (t && t.currency !== this.base) {
+      this.rates[t.currency] = t.rate;
+      if (!this.currencies.includes(t.currency)) this.currencies = [...this.currencies, t.currency];
+      this.form.controls.currency.setValue(t.currency);
+    } else if (prev && prev.currency !== this.base && this.form.controls.currency.value === prev.currency) {
+      this.form.controls.currency.setValue(this.base);
+    }
+    this.sortCats();
+  }
+
+  private sortCats() {
+    const plan = new Set(this.trip?.plan.map(l => l.category) ?? []);
+    if (!plan.size) return;
+    this.categories = [...this.categories].sort((a, b) => Number(plan.has(b.name)) - Number(plan.has(a.name)));
+  }
+
   async ngOnInit() {
     const [cats, rates, accounts] = await Promise.all([
       this.db.getAllCategories(),
@@ -86,9 +119,20 @@ export class TransactionFormComponent implements OnInit, AfterViewInit {
     ]);
     this.allCats = cats;
     this.rates = rates;
+    this.baseRates = { ...rates };
     this.accounts = accounts;
     this.currencies = [this.base, ...Object.keys(rates).filter(c => c !== this.base)];
     await this.filterCats();
+    // trips that can take entries: started, and up to 7 days after the end (late receipts)
+    const now = new Date();
+    const param = Number(this.route.snapshot.queryParamMap.get('trip')) || 0;
+    this.trips = (await this.db.getTrips()).filter(t => {
+      const st = tripStatus(t, now);
+      return t.id === param || st.state === 'active' || (st.state === 'past' && now.getTime() - new Date(t.end).getTime() < 8 * 864e5);
+    });
+    const active = tripsOnDate(this.trips, now)[0];
+    const startId = this.trips.some(t => t.id === param) ? param : active?.id ?? 0;
+    if (startId) this.setTrip(startId);
     this.form.controls.currency.valueChanges.subscribe(() => this.updatePresets());
     // learn from past entries; suggest a category while typing the note
     this.clf = buildClassifier(await this.db.getAllTransactions(), cats);
@@ -113,6 +157,7 @@ export class TransactionFormComponent implements OnInit, AfterViewInit {
     this.autoPicked = false;
     this.form.patchValue({ type: t, category: '' });
     await this.filterCats();
+    this.sortCats();
   }
 
   pick(name: string, auto = false) {
@@ -174,6 +219,7 @@ export class TransactionFormComponent implements OnInit, AfterViewInit {
         if (!rate) throw new Error('No rate');
         Object.assign(tx, { currency: v.currency, origAmount: entered, rate, amount: round2(entered * rate) });
       }
+      if (v.type === 'expense' && this.tripId) tx.tripId = this.tripId;
       if (v.account) tx.account = v.account;
       const tags = parseTags(v.tags);
       if (tags.length) tx.tags = tags;

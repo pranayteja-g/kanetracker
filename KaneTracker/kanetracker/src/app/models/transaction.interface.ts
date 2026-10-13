@@ -15,4 +15,6 @@ export interface Transaction {
   /** Compressed JPEG data URL. */
   receipt?: string;
   recurringId?: number;
+  /** Link to a trip (counts toward that trip's plan; still a normal expense everywhere else). */
+  tripId?: number;
 }

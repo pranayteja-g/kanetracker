@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { DexieService } from '../services/dexie.service';
+import { DEFAULT_ACCOUNTS, DexieService } from '../services/dexie.service';
 import { Category } from '../models/category.interface';
 import { Transaction } from '../models/transaction.interface';
 import { buildClassifier } from '../shared/categorize';
@@ -44,6 +44,29 @@ const PALETTE = ['#6366f1', '#14b8a6', '#f59e0b', '#ec4899', '#3b82f6', '#84cc16
 
       <ng-container *ngIf="rows.length">
         <p class="muted">{{ selected }} of {{ rows.length }} selected<span *ngIf="dups"> · {{ dups }} look like duplicates (unchecked)</span></p>
+        <div class="tools">
+          <label *ngIf="needCount('expense')">
+            <span>{{ needCount('expense') }} expense rows need a category</span>
+            <select (change)="fill('expense', $any($event.target).value); $any($event.target).value = ''" aria-label="Set category for all empty expense rows">
+              <option value="">Set all to…</option>
+              <option *ngFor="let c of catsFor('expense')" [value]="c.name">{{ c.name }}</option>
+            </select>
+          </label>
+          <label *ngIf="needCount('income')">
+            <span>{{ needCount('income') }} income rows need a category</span>
+            <select (change)="fill('income', $any($event.target).value); $any($event.target).value = ''" aria-label="Set category for all empty income rows">
+              <option value="">Set all to…</option>
+              <option *ngFor="let c of catsFor('income')" [value]="c.name">{{ c.name }}</option>
+            </select>
+          </label>
+          <label>
+            <span>Account for rows without one</span>
+            <select [(ngModel)]="defAccount" aria-label="Default account">
+              <option value="">None</option>
+              <option *ngFor="let a of accounts" [value]="a">{{ a }}</option>
+            </select>
+          </label>
+        </div>
         <div class="r" *ngFor="let r of rows" [class.off]="!r.on">
           <input type="checkbox" [(ngModel)]="r.on" aria-label="Include" />
           <div class="m">
@@ -80,6 +103,8 @@ const PALETTE = ['#6366f1', '#14b8a6', '#f59e0b', '#ec4899', '#3b82f6', '#84cc16
     select { min-height: 36px; border: 1px solid var(--k-line); border-radius: 8px; background: var(--k-surface); color: var(--k-ink); font: inherit; font-size: 14px; }
     .a { font-weight: 500; font-variant-numeric: tabular-nums; }
     .a.income { color: var(--k-income); }
+    .tools { display: flex; flex-direction: column; gap: 8px; margin: 8px 0 4px; padding: 10px 12px; border: 1px solid var(--k-line); border-radius: 12px; background: var(--k-surface); }
+    .tools label { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 13px; color: var(--k-muted); }
     .bar { position: sticky; bottom: calc(80px + env(safe-area-inset-bottom)); display: flex; gap: 8px; padding: 12px 0; background: linear-gradient(transparent, var(--k-bg) 30%); }
     .bar .btn:last-child { flex: 1; }
   `],
@@ -94,6 +119,8 @@ export class ImportComponent implements OnInit {
   err = '';
   rows: Row[] = [];
   busy = false;
+  accounts: string[] = DEFAULT_ACCOUNTS;
+  defAccount = '';
   private cats: Category[] = [];
   private existing = new Set<string>();
   private clf!: ReturnType<typeof buildClassifier>;
@@ -105,6 +132,7 @@ export class ImportComponent implements OnInit {
   async ngOnInit() {
     const [cats, txs] = await Promise.all([this.db.getAllCategories(), this.db.getAllTransactions()]);
     this.cats = cats;
+    this.accounts = await this.db.getSetting('accounts', DEFAULT_ACCOUNTS);
     this.clf = buildClassifier(txs, cats);
     txs.forEach(t => this.existing.add(this.key(new Date(t.date), t.amount, t.type)));
   }
@@ -113,6 +141,12 @@ export class ImportComponent implements OnInit {
   back() { history.length > 1 ? history.back() : this.router.navigate(['/settings']); }
   setMode(m: 'csv' | 'sms') { this.mode = m; this.text = ''; this.err = ''; }
   catsFor(t: 'income' | 'expense') { return this.cats.filter(c => c.type === t); }
+  /** Selected rows of this type that still have no category. */
+  needCount(t: 'income' | 'expense') { return this.rows.filter(r => r.on && r.type === t && !r.cat).length; }
+  fill(t: 'income' | 'expense', cat: string) {
+    if (!cat) return;
+    this.rows.forEach(r => { if (r.on && r.type === t && !r.cat) { r.cat = cat; r.sure = true; } });
+  }
   hasCat(r: Row) { return this.cats.some(c => c.type === r.type && c.name === r.cat); }
 
   async onFile(ev: Event) {
@@ -157,7 +191,8 @@ export class ImportComponent implements OnInit {
       const txs: Transaction[] = chosen.map(r => {
         const name = fresh.find(c => c.type === r.type && c.name.toLowerCase() === r.cat.toLowerCase())?.name || r.cat;
         const t: Transaction = { type: r.type, amount: r.amount, category: name, date: r.date.toISOString(), description: r.desc };
-        if (r.account) t.account = r.account;
+        const acc = r.account || this.defAccount;
+        if (acc) t.account = acc;
         if (r.tags?.length) t.tags = r.tags;
         return t;
       });

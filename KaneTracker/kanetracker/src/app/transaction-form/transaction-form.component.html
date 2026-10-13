@@ -21,6 +21,16 @@
     <button type="button" class="chip" *ngFor="let p of presets" (click)="setAmount(p)">{{ p }}</button>
   </div>
 
+  <ng-container *ngIf="type === 'expense' && trips.length">
+    <p class="label">Trip</p>
+    <div class="cats">
+      <button type="button" class="cat" *ngFor="let t of trips" [class.on]="tripId === t.id" (click)="setTrip(t.id!)">
+        <mat-icon class="tic">luggage</mat-icon>{{ t.name }}
+      </button>
+    </div>
+    <p class="muted" *ngIf="trip">Counts toward {{ trip.name }} and your monthly totals.</p>
+  </ng-container>
+
   <p class="label">Category</p>
   <div class="cats">
     <button type="button" class="cat" *ngFor="let c of categories"

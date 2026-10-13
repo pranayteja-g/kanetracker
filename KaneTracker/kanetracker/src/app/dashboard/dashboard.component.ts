@@ -8,6 +8,10 @@ import { InrPipe } from '../shared/inr.pipe';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Insight, RecurringSuggestion, buildInsights, detectRecurring } from '../shared/insights';
 import { fmtMoney } from '../shared/currency';
+import { TripSummary, summarizeTrip, tripStatus } from '../shared/trips';
+import { Trip } from '../models/trip.interface';
+
+interface TripCard { id: number; name: string; s: TripSummary; row: BudgetRow }
 
 type Period = 'month' | 'last' | '3m' | 'year' | 'all';
 interface Tx extends Transaction { t: number }
@@ -40,6 +44,7 @@ export class DashboardComponent implements OnInit {
   top: TopCat[] = [];
   recent: Tx[] = [];
   budgets: BudgetRow[] = [];
+  tripCards: TripCard[] = [];
   staleBackup = false;
   insights: Insight[] = [];
   suggestions: RecurringSuggestion[] = [];
@@ -61,6 +66,16 @@ export class DashboardComponent implements OnInit {
     this.staleBackup = this.all.length >= 10 && (!lb || Date.now() - new Date(lb).getTime() > 30 * 864e5);
     this.budgets = this.buildBudgets(buds);
     this.compute();
+    try {
+      const now = new Date();
+      const trips: Trip[] = await this.db.getTrips();
+      this.tripCards = trips.filter(t => tripStatus(t, now).state === 'active').map(t => {
+        const s = summarizeTrip(t, txs, now);
+        return { id: t.id!, name: t.name, s, row: { name: t.name, spent: s.spent, limit: s.planned, pct: s.planned > 0 ? Math.min(100, (s.spent / s.planned) * 100) : 0, color: '#6366f1', over: s.planned > 0 && s.spent > s.planned } };
+      });
+    } catch (e) {
+      console.error('Trips failed', e);
+    }
     try {
       const [rules, dis] = await Promise.all([this.db.recurring.toArray(), this.db.getSetting<string[]>('dismissedRecurring', [])]);
       this.dismissed = new Set(dis);
@@ -103,6 +118,10 @@ export class DashboardComponent implements OnInit {
       const s = spent.get(b.category) || 0;
       return { name: b.category, spent: s, limit: b.limit, pct: Math.min(100, (s / b.limit) * 100), color: this.color(b.category), over: s > b.limit };
     }).sort((a, b) => b.spent / b.limit - a.spent / a.limit);
+  }
+
+  get tripRows(): BudgetRow[] {
+    return this.tripCards.filter(c => c.s.planned > 0).map(c => c.row);
   }
 
   setPeriod(p: Period) {

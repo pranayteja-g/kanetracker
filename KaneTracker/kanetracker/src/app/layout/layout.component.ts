@@ -25,9 +25,10 @@ export class LayoutComponent {
   hideNav = false;
 
   constructor(router: Router) {
-    this.hideNav = router.url.startsWith('/transaction-form');
+    const hide = (u: string) => u.startsWith('/transaction-form') || /^\/trips\/(new|\d+\/edit)/.test(u);
+    this.hideNav = hide(router.url);
     router.events
       .pipe(filter((e): e is NavigationEnd => e instanceof NavigationEnd))
-      .subscribe(e => (this.hideNav = e.urlAfterRedirects.startsWith('/transaction-form')));
+      .subscribe(e => (this.hideNav = hide(e.urlAfterRedirects)));
   }
 }

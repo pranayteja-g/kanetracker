@@ -5,6 +5,8 @@ import { Category } from '../models/category.interface';
 import { Recurring } from '../models/recurring.interface';
 import { advance } from '../shared/utils';
 import { Budget } from '../models/budget.interface';
+import { Trip } from '../models/trip.interface';
+import { TRIP_CATEGORIES } from '../shared/trips';
 import { getBase, guessCurrency, isKnown, setBase } from '../shared/currency';
 
 /** Never exported/imported: lock secrets. */
@@ -25,6 +27,7 @@ export class DexieService extends Dexie {
   recurring!: Table<Recurring, number>;
   budgets!: Table<Budget, number>;
   settings!: Table<{ key: string; value: any }, string>;
+  trips!: Table<Trip, number>;
   /** Set at startup by APP_INITIALIZER. */
   recurringAdded = 0;
   currencyGuessed = false;
@@ -57,12 +60,23 @@ export class DexieService extends Dexie {
       settings: 'key'
     });
 
+    // v5: trips + tripId index on transactions
+    this.version(5).stores({
+      transactions: '++id, date, type, category, account, tripId, [type+date]',
+      categories: '++id, name, type',
+      recurring: '++id, nextDate',
+      budgets: '++id, &category',
+      settings: 'key',
+      trips: '++id, start'
+    });
+
     // Initialize tables
     this.transactions = this.table('transactions');
     this.categories = this.table('categories');
     this.recurring = this.table('recurring');
     this.budgets = this.table('budgets');
     this.settings = this.table('settings');
+    this.trips = this.table('trips');
   }
 
   async addTransaction(transaction: Transaction): Promise<number> {
@@ -99,6 +113,19 @@ export class DexieService extends Dexie {
 
   getAllCategories(): Promise<Category[]> {
     return this.categories.toArray();
+  }
+
+  /** Make sure the trip category set exists. Reuses existing names (case-insensitive). Returns name map. */
+  async ensureTripCategories(): Promise<Record<string, string>> {
+    const out: Record<string, string> = {};
+    const existing = await this.getCategoriesByType('expense');
+    for (const tc of TRIP_CATEGORIES) {
+      const hit = existing.find(c => c.name.toLowerCase().trim() === tc.name.toLowerCase());
+      if (hit) { out[tc.name] = hit.name; continue; }
+      try { await this.categories.add({ name: tc.name, color: tc.color, type: 'expense' }); out[tc.name] = tc.name; }
+      catch { out[tc.name] = tc.name; }
+    }
+    return out;
   }
 
   async addCategory(category: Category): Promise<number> {
@@ -145,6 +172,12 @@ export class DexieService extends Dexie {
       throw new Error(`Cannot delete category "${categoryToDelete.name}" because ${rules} recurring rule(s) use it.`);
     }
 
+    const inTrips = categoryToDelete.type === 'expense'
+      ? await this.trips.filter(t => t.plan.some(l => l.category === categoryToDelete.name && l.amount > 0)).count() : 0;
+    if (inTrips > 0) {
+      throw new Error(`Cannot delete category "${categoryToDelete.name}" because ${inTrips} trip plan(s) use it.`);
+    }
+
     await this.transaction('rw', this.categories, this.budgets, async () => {
       await this.budgets.where('category').equals(categoryToDelete.name).delete();
       await this.categories.delete(categoryId);
@@ -168,7 +201,7 @@ export class DexieService extends Dexie {
 
   /** Updates a category; a rename also renames it on existing transactions (no orphans). */
   async updateCategory(categoryId: number, categoryData: Partial<Category>): Promise<number> {
-    return this.transaction('rw', [this.categories, this.transactions, this.recurring, this.budgets], async () => {
+    return this.transaction('rw', [this.categories, this.transactions, this.recurring, this.budgets, this.trips], async () => {
       const current = await this.categories.get(categoryId);
       if (!current) return 0;
       const name = categoryData.name?.trim();
@@ -181,7 +214,10 @@ export class DexieService extends Dexie {
       if (name && name !== current.name) {
         await this.transactions.where('category').equals(current.name).modify({ category: name });
         await this.recurring.filter(r => r.category === current.name && r.type === current.type).modify({ category: name });
-        if (current.type === 'expense') await this.budgets.where('category').equals(current.name).modify({ category: name });
+        if (current.type === 'expense') {
+          await this.budgets.where('category').equals(current.name).modify({ category: name });
+          await this.trips.toCollection().modify((t: Trip) => { t.plan.forEach(l => { if (l.category === current.name) l.category = name; }); });
+        }
       }
       return this.categories.update(categoryId, { ...categoryData, ...(name ? { name } : {}), type: current.type });
     });
@@ -389,7 +425,7 @@ export class DexieService extends Dexie {
     if (convert && !(rate > 0 && isFinite(rate))) throw new Error('Bad rate');
 
     let converted = 0;
-    await this.transaction('rw', [this.transactions, this.recurring, this.budgets, this.settings], async () => {
+    await this.transaction('rw', [this.transactions, this.recurring, this.budgets, this.settings, this.trips], async () => {
       const rates = await this.getRates();
       let nextRates: Record<string, number> = {};
 
@@ -412,12 +448,22 @@ export class DexieService extends Dexie {
         });
         await this.recurring.toCollection().modify((r: Recurring) => { r.amount = round2(r.amount * rate); });
         await this.budgets.toCollection().modify((b: Budget) => { b.limit = round2(b.limit * rate); });
+        // trip plans stay in their own currency; only the trip→base rate changes
+        await this.trips.toCollection().modify((t: Trip) => {
+          if (t.currency === newCode) t.rate = 1;
+          else t.rate = sig(t.rate * rate);
+        });
         for (const [c, v] of Object.entries(rates)) if (c !== newCode) nextRates[c] = sig(v * rate);
         nextRates[oldCode] = sig(rate);
       } else {
         // label-only: foreign-entry rates are kept as-is; user should review them
         nextRates = { ...rates };
         delete nextRates[newCode];
+        // trips written in the old base follow the relabel; trips already in the new currency are 1:1
+        await this.trips.toCollection().modify((t: Trip) => {
+          if (t.currency === oldCode) { t.currency = newCode; }
+          else if (t.currency === newCode) t.rate = 1;
+        });
       }
       await this.settings.put({ key: 'rates', value: nextRates });
       await this.settings.put({ key: 'baseCurrency', value: newCode });
@@ -426,15 +472,40 @@ export class DexieService extends Dexie {
     return { converted };
   }
 
+  // ---------- trips ----------
+  async getTrips(): Promise<Trip[]> {
+    return (await this.trips.toArray()).sort((a, b) => a.start.localeCompare(b.start));
+  }
+
+  /** Deleting a trip keeps its expenses; they are just unlinked. */
+  async deleteTrip(id: number): Promise<number> {
+    return this.transaction('rw', this.trips, this.transactions, async () => {
+      const n = await this.transactions.where('tripId').equals(id).modify((t: Transaction) => { delete t.tripId; });
+      await this.trips.delete(id);
+      return n;
+    });
+  }
+
+  /** Copy a trip's plan to new dates (same length). Expenses are not copied. */
+  async duplicateTrip(id: number, start: Date): Promise<number> {
+    const t = await this.trips.get(id);
+    if (!t) throw new Error('Trip not found');
+    const days = Math.round((new Date(t.end).getTime() - new Date(t.start).getTime()) / 864e5);
+    const s = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+    const e = new Date(s.getFullYear(), s.getMonth(), s.getDate() + days);
+    const { id: _id, ...rest } = t;
+    return this.trips.add({ ...rest, name: `${t.name} (copy)`, start: s.toISOString(), end: e.toISOString(), plan: t.plan.map(l => ({ ...l })) });
+  }
+
   // ---------- backup / restore ----------
   async exportAll() {
-    const [transactions, categories, recurring, budgets, settings] = await Promise.all([
+    const [transactions, categories, recurring, budgets, settings, trips] = await Promise.all([
       this.transactions.toArray(), this.categories.toArray(), this.recurring.toArray(),
-      this.budgets.toArray(), this.settings.toArray(),
+      this.budgets.toArray(), this.settings.toArray(), this.trips.toArray(),
     ]);
     return {
-      app: 'kanetracker', version: 1, exportedAt: new Date().toISOString(),
-      transactions, categories, recurring, budgets,
+      app: 'kanetracker', version: 2, exportedAt: new Date().toISOString(),
+      transactions, categories, recurring, budgets, trips,
       settings: settings.filter(s => !SECRET_KEYS.has(s.key) && s.key !== 'lastBackup'),
     };
   }
@@ -452,9 +523,18 @@ export class DexieService extends Dexie {
     const rec: Recurring[] = (data.recurring || []).filter((r: any) => r && okType(r.type) && r.amount > 0 && r.nextDate);
     const bud: Budget[] = (data.budgets || []).filter((b: any) => b && b.category && b.limit > 0);
     const set = (data.settings || []).filter((s: any) => s && s.key && !SECRET_KEYS.has(s.key));
+    const validDate = (s: any) => typeof s === 'string' && !isNaN(Date.parse(s));
+    const trips: Trip[] = (data.trips || []).filter((t: any) =>
+      t && typeof t.name === 'string' && validDate(t.start) && validDate(t.end) && Date.parse(t.end) >= Date.parse(t.start) &&
+      typeof t.currency === 'string' && /^[A-Z]{3}$/.test(t.currency) && t.rate > 0 && Array.isArray(t.plan))
+      .map((t: any) => ({ ...t, plan: t.plan.filter((l: any) => l && typeof l.category === 'string' && l.amount >= 0) }));
+    // links to trips that did not survive validation are dropped
+    const tripIds = new Set(trips.map(t => t.id));
+    txs.forEach(t => { if (t.tripId != null && !tripIds.has(t.tripId)) delete t.tripId; });
 
-    await this.transaction('rw', [this.transactions, this.categories, this.recurring, this.budgets, this.settings], async () => {
-      await Promise.all([this.transactions.clear(), this.categories.clear(), this.recurring.clear(), this.budgets.clear()]);
+    await this.transaction('rw', [this.transactions, this.categories, this.recurring, this.budgets, this.settings, this.trips], async () => {
+      await Promise.all([this.transactions.clear(), this.categories.clear(), this.recurring.clear(), this.budgets.clear(), this.trips.clear()]);
+      await this.trips.bulkPut(trips);
       await this.categories.bulkPut(cats);
       await this.transactions.bulkPut(txs);
       await this.recurring.bulkPut(rec);
