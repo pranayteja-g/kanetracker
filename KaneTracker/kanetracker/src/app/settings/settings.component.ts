@@ -38,6 +38,7 @@ import { download, toCsv, toInput } from '../shared/utils';
         <p class="muted" [class.warn]="stale">{{ lastBackup ? 'Last backup: ' + lastBackup : 'Never backed up.' }} Data lives only in this browser. Clearing site data erases it.</p>
         <div class="btns">
           <button class="btn ghost" (click)="exportJson()"><mat-icon>download</mat-icon>JSON</button>
+          <button class="btn ghost" *ngIf="canShare" (click)="shareJson()"><mat-icon>ios_share</mat-icon>Share</button>
           <button class="btn ghost" (click)="exportCsv()"><mat-icon>table_chart</mat-icon>CSV</button>
           <label class="btn ghost"><mat-icon>restore</mat-icon>Restore<input type="file" accept=".json,.csv,application/json,text/csv" hidden (change)="restore($event)" /></label>
         </div>
@@ -222,6 +223,22 @@ export class SettingsComponent implements OnInit {
   back() { history.length > 1 ? history.back() : this.router.navigate(['/dashboard']); }
   private toast(m: string) { this.snack.open(m, 'OK', { duration: 4000 }); }
 
+  canShare = (() => {
+    try { return typeof navigator.share === 'function' && typeof navigator.canShare === 'function' && navigator.canShare({ files: [new File(['{}'], 'x.json', { type: 'application/json' })] }); }
+    catch { return false; }
+  })();
+
+  /** Share sheet → "Save to Files" / iCloud Drive / mail. Counts as a backup only if the sheet completes. */
+  async shareJson() {
+    try {
+      const f = new File([JSON.stringify(await this.db.exportAll())], `kanetracker-${toInput(new Date())}.json`, { type: 'application/json' });
+      await navigator.share({ files: [f], title: 'Kanetracker backup' });
+      await this.markBackup();
+    } catch (e: any) {
+      if (e?.name !== 'AbortError') this.toast('Could not share. Use JSON download instead.');
+    }
+  }
+
   async exportJson() {
     download(`kanetracker-${toInput(new Date())}.json`, 'application/json', JSON.stringify(await this.db.exportAll()));
     await this.markBackup();
@@ -281,8 +298,13 @@ export class SettingsComponent implements OnInit {
     await this.db.setSetting('accounts', this.accounts);
   }
   async delAccount(a: string) {
-    this.accounts = this.accounts.filter(x => x !== a);
+    const before = this.accounts;
+    this.accounts = before.filter(x => x !== a);
     await this.db.setSetting('accounts', this.accounts);
+    this.snack.open(`${a} removed`, 'Undo', { duration: 5000 }).onAction().subscribe(async () => {
+      this.accounts = before;
+      await this.db.setSetting('accounts', before);
+    });
   }
 
   async enableLock() {

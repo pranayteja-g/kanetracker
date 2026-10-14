@@ -2,6 +2,7 @@
   <header class="top">
     <h1>History</h1>
     <span class="hb">
+      <button class="icon-btn" (click)="selecting ? stopSelect() : startSelect()" [attr.aria-label]="selecting ? 'Cancel select' : 'Select entries'"><mat-icon>{{ selecting ? 'close' : 'checklist' }}</mat-icon></button>
       <button class="icon-btn fbtn" (click)="showF = !showF" aria-label="Filters" [class.on]="showF || active"><mat-icon>tune</mat-icon><b *ngIf="active">{{ active }}</b></button>
       <button class="icon-btn" (click)="search()" aria-label="Search"><mat-icon>search</mat-icon></button>
     </span>
@@ -42,7 +43,8 @@
         <div class="bg l"><mat-icon>edit</mat-icon></div>
         <div class="bg r"><mat-icon>delete_outline</mat-icon></div>
         <div class="row-fg" kSwipe #sw="kSwipe" (swipeLeft)="remove(t)" (swipeRight)="open(t, sw, true)">
-          <button class="tx" (click)="open(t, sw)">
+          <button class="tx" (click)="open(t, sw)" [class.picked]="t.id && sel.has(t.id)">
+            <mat-icon class="chk" *ngIf="selecting">{{ t.id && sel.has(t.id) ? 'check_box' : 'check_box_outline_blank' }}</mat-icon>
             <i [style.background]="color(t.category)"></i>
             <span class="m"><b>{{ t.category }}</b>
               <span *ngIf="t.description || t.account || t.tags?.length">{{ t.description }}<ng-container *ngIf="t.account"> · {{ t.account }}</ng-container><ng-container *ngFor="let tg of t.tags"> #{{ tg }}</ng-container></span></span>
@@ -58,6 +60,22 @@
     </section>
 
     <p class="muted none" *ngIf="!groups.length">Nothing here</p>
+    <section class="bulk" *ngIf="selecting">
+      <div class="bh">
+        <b>{{ sel.size }} selected</b>
+        <button class="link" (click)="selectAllShown()">Select all shown</button>
+        <button class="link" (click)="bulkOpen = !bulkOpen" [disabled]="!sel.size">{{ bulkOpen ? 'Hide' : 'Edit' }}</button>
+        <button class="link del" (click)="deleteBulk()" [disabled]="!sel.size">Delete</button>
+      </div>
+      <div class="g2" *ngIf="bulkOpen && sel.size">
+        <label><span class="label">Category</span><select [(ngModel)]="bulk.category" [disabled]="!bulkCats.length"><option value="">Keep</option><option *ngFor="let c of bulkCats" [value]="c">{{ c }}</option></select></label>
+        <label><span class="label">Account</span><select [(ngModel)]="bulk.account"><option value="__keep">Keep</option><option value="">None</option><option *ngFor="let a of accList" [value]="a">{{ a }}</option></select></label>
+        <label><span class="label">Trip</span><select [(ngModel)]="bulk.tripId"><option [ngValue]="-1">Keep</option><option [ngValue]="0">None</option><option *ngFor="let t of opts.trips" [ngValue]="t.id">{{ t.name }}</option></select></label>
+        <label><span class="label">Add tag</span><input type="text" [(ngModel)]="bulk.tag" placeholder="work" autocapitalize="none" /></label>
+        <button class="btn full" (click)="applyBulk()">Apply to {{ sel.size }}</button>
+      </div>
+    </section>
+
     <button class="btn ghost more" *ngIf="hasMore" (click)="more()">Show more</button>
   </ng-container>
 

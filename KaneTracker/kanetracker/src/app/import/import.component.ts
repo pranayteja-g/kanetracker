@@ -196,8 +196,11 @@ export class ImportComponent implements OnInit {
         if (r.tags?.length) t.tags = r.tags;
         return t;
       });
-      await this.db.transactions.bulkAdd(txs);
-      this.snack.open(`Imported ${txs.length}`, 'OK', { duration: 3000 });
+      const keys = (await this.db.transactions.bulkAdd(txs, { allKeys: true })) as number[];
+      this.snack.open(`Imported ${txs.length}`, 'Undo', { duration: 8000 }).onAction().subscribe(async () => {
+        await this.db.transactions.bulkDelete(keys);
+        this.snack.open('Import undone', undefined, { duration: 2000 });
+      });
       this.router.navigate(['/transactions']);
     } catch (e) {
       console.error(e);

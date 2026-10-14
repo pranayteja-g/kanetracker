@@ -165,6 +165,14 @@ export class TransactionFormComponent implements OnInit, AfterViewInit {
       const st = tripStatus(t, now);
       return t.id === param || st.state === 'active' || (st.state === 'past' && now.getTime() - new Date(t.end).getTime() < 8 * 864e5);
     });
+    // prefill from quick-add (?amount=&note=&category=&type=)
+    const qp = this.route.snapshot.queryParamMap;
+    if (qp.get('type') === 'income') await this.setType('income');
+    const qa = Number(qp.get('amount'));
+    if (qa > 0) this.form.controls.amount.setValue(qa);
+    if (qp.get('note')) { this.manual = true; this.form.controls.description.setValue(qp.get('note')!.slice(0, 200)); }
+    const qc = qp.get('category');
+    if (qc && this.categories.some(c => c.name === qc)) this.pick(qc);
     const active = tripsOnDate(this.trips, now)[0];
     const startId = this.trips.some(t => t.id === param) ? param : active?.id ?? 0;
     if (startId) this.setTrip(startId);

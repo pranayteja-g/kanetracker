@@ -5,7 +5,7 @@ import { Router, RouterLink } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { DexieService } from '../services/dexie.service';
+import { DEFAULT_ACCOUNTS, DexieService } from '../services/dexie.service';
 import { Transaction } from '../models/transaction.interface';
 import { TransactionDetailDialogComponent } from '../transaction-detail-dialog/transaction-detail-dialog.component';
 import { InrPipe } from '../shared/inr.pipe';
@@ -37,8 +37,15 @@ export class TransactionsComponent implements OnInit {
   f: HFilter = EMPTY_FILTER();
   showF = false;
   presets: Preset[] = [];
+  catList: { name: string; type: string }[] = [];
+  accList: string[] = [];
   opts = { cats: [] as string[], accs: [] as string[], tags: [] as string[], trips: [] as Trip[] };
   count = 0;
+  // bulk select
+  selecting = false;
+  sel = new Set<number>();
+  bulk = { category: '', account: '__keep', tripId: -1, tag: '' };
+  bulkOpen = false;
   total = 0;
 
   private all: Transaction[] = [];
@@ -65,6 +72,8 @@ export class TransactionsComponent implements OnInit {
     };
     this.presets = await this.db.getSetting<Preset[]>('historyPresets', []);
     cats.forEach(c => this.colors.set(c.name, c.color));
+    this.catList = cats;
+    this.accList = await this.db.getSetting<string[]>('accounts', [...DEFAULT_ACCOUNTS]);
     this.apply();
   }
 
@@ -87,7 +96,51 @@ export class TransactionsComponent implements OnInit {
     return this.colors.get(name) || '#d4d4d4';
   }
 
+  startSelect() { this.selecting = true; this.sel.clear(); this.bulkOpen = false; }
+  stopSelect() { this.selecting = false; this.sel.clear(); this.bulkOpen = false; }
+  toggle(t: Transaction) { if (!t.id) return; this.sel.has(t.id) ? this.sel.delete(t.id) : this.sel.add(t.id); this.sel = new Set(this.sel); }
+  selectAllShown() { this.view.forEach(t => t.id && this.sel.add(t.id)); this.sel = new Set(this.sel); }
+
+  /** Category list for the selection; only offered when everything selected has the same type. */
+  get bulkCats(): string[] {
+    const types = new Set(this.all.filter(t => t.id && this.sel.has(t.id)).map(t => t.type));
+    if (types.size !== 1) return [];
+    const ty = [...types][0];
+    return this.catList.filter(c => c.type === ty).map(c => c.name);
+  }
+
+  async applyBulk() {
+    const ids = [...this.sel];
+    if (!ids.length) return;
+    const b = this.bulk;
+    const patch: { category?: string; account?: string; tripId?: number; addTag?: string } = {};
+    if (b.category) patch.category = b.category;
+    if (b.account !== '__keep') patch.account = b.account;
+    if (b.tripId !== -1) patch.tripId = b.tripId;
+    if (b.tag.trim()) patch.addTag = b.tag.trim().replace(/^#/, '').toLowerCase().slice(0, 30);
+    if (!Object.keys(patch).length) { this.snack.open('Pick something to change', undefined, { duration: 2000 }); return; }
+    const before = this.all.filter(t => t.id && this.sel.has(t.id)).map(t => ({ ...t }));
+    const n = await this.db.bulkUpdate(ids, patch);
+    this.bulk = { category: '', account: '__keep', tripId: -1, tag: '' };
+    this.stopSelect();
+    await this.load();
+    this.snack.open(`Updated ${n}`, 'Undo', { duration: 6000 }).onAction().subscribe(async () => {
+      await this.db.transactions.bulkPut(before);
+      await this.load();
+    });
+  }
+
+  async deleteBulk() {
+    const ids = [...this.sel];
+    if (!ids.length || !confirm(`Delete ${ids.length} entr${ids.length === 1 ? 'y' : 'ies'}?`)) return;
+    const undo = await this.db.deleteMany(ids);
+    this.stopSelect();
+    await this.load();
+    this.snack.open(`Deleted ${ids.length}`, 'Undo', { duration: 6000 }).onAction().subscribe(async () => { await undo(); await this.load(); });
+  }
+
   open(tx: Transaction, row?: SwipeRowDirective, edit = false) {
+    if (this.selecting) { this.toggle(tx); return; }
     if (row?.swiped) return;
     this.dialog
       .open(TransactionDetailDialogComponent, { width: '500px', maxWidth: '95vw', data: { transaction: tx, edit } })
@@ -96,7 +149,7 @@ export class TransactionsComponent implements OnInit {
   }
 
   async remove(tx: Transaction) {
-    if (!tx.id) return;
+    if (!tx.id || this.selecting) return;
     const backup = { ...tx };
     try {
       await this.db.deleteTransaction(tx.id);
@@ -112,6 +165,7 @@ export class TransactionsComponent implements OnInit {
   }
 
   async dup(tx: Transaction) {
+    if (this.selecting) return;
     await this.db.duplicateTransaction(tx);
     await this.load();
     this.snack.open('Duplicated to today', undefined, { duration: 1500 });

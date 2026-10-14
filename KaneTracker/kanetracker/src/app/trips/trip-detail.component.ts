@@ -227,9 +227,13 @@ export class TripDetailComponent implements OnInit {
     const n = this.txs.length;
     if (!confirm(`Delete "${this.trip.name}"?${n ? ` Its ${n} expense${n === 1 ? '' : 's'} stay in your history, just unlinked from the trip.` : ''}`)) return;
     try {
-      await this.db.deleteTrip(this.trip.id);
-      this.snack.open('Trip deleted', undefined, { duration: 2000 });
+      const undo = await this.db.deleteTripWithUndo(this.trip.id);
       this.router.navigate(['/trips'], { replaceUrl: true });
+      this.snack.open('Trip deleted', 'Undo', { duration: 6000 }).onAction().subscribe(async () => {
+        await undo();
+        this.snack.open('Trip restored', undefined, { duration: 1500 });
+        this.router.navigate(['/trips']);
+      });
     } catch {
       this.snack.open('Delete failed', 'OK', { duration: 3000 });
     }

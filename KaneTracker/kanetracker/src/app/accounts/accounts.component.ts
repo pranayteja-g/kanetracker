@@ -175,8 +175,13 @@ export class AccountsComponent implements OnInit {
   }
 
   async del(id: string) {
-    await this.db.setSetting('transfers', this.transfers.filter(t => t.id !== id));
+    const before = this.transfers;
+    await this.db.setSetting('transfers', before.filter(t => t.id !== id));
     await this.load();
+    this.snack.open('Transfer deleted', 'Undo', { duration: 5000 }).onAction().subscribe(async () => {
+      await this.db.setSetting('transfers', before);
+      await this.load();
+    });
   }
 
   back() { history.length > 1 ? history.back() : this.router.navigate(['/settings']); }

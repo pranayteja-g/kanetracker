@@ -129,9 +129,13 @@ export class GoalsComponent implements OnInit {
   }
 
   async remove(g: Goal) {
-    if (!confirm(`Delete goal "${g.name}"?`)) return;
-    await this.db.setSetting('goals', this.goals.filter(x => x.id !== g.id));
+    const before = this.goals;
+    await this.db.setSetting('goals', before.filter(x => x.id !== g.id));
     await this.load();
+    this.snack.open('Goal deleted', 'Undo', { duration: 6000 }).onAction().subscribe(async () => {
+      await this.db.setSetting('goals', before);
+      await this.load();
+    });
   }
 
   back() { history.length > 1 ? history.back() : this.router.navigate(['/settings']); }

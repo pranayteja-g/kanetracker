@@ -29,3 +29,10 @@
 .g2 select, .g2 input { min-height: 44px; padding: 0 10px; border: 1px solid var(--k-line); border-radius: 10px; background: var(--k-surface); color: var(--k-ink); font: inherit; font-size: 16px; width: 100%; box-sizing: border-box; }
 .frow { display: flex; gap: 8px; margin-top: 12px; } .frow .btn { flex: 1; min-height: 44px; }
 .fsum { margin: 12px 0 0; }
+
+.chk { color: var(--k-muted); flex: none; margin-right: 4px; } .picked .chk { color: var(--k-accent); }
+.picked { background: color-mix(in srgb, var(--k-accent) 8%, transparent) !important; }
+.bulk { position: sticky; bottom: calc(76px + env(safe-area-inset-bottom)); margin-top: 16px; padding: 12px; border: 1px solid var(--k-line); border-radius: 14px; background: var(--k-surface); z-index: 5; }
+.bh { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; } .bh b { flex: 1; }
+.bh .link { border: 0; background: none; color: var(--k-accent); font: inherit; padding: 4px 0; } .bh .link:disabled { opacity: .4; } .bh .del { color: #dc2626; }
+.bulk .g2 { margin-top: 12px; } .bulk .full { grid-column: 1 / -1; min-height: 48px; }

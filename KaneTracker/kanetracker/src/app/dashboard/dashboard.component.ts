@@ -5,6 +5,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { DexieService } from '../services/dexie.service';
 import { Transaction } from '../models/transaction.interface';
 import { InrPipe } from '../shared/inr.pipe';
+import { QuickAddComponent } from '../quick-add/quick-add.component';
+import { Category } from '../models/category.interface';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Insight, RecurringSuggestion, buildInsights, detectRecurring } from '../shared/insights';
 import { fmtMoney } from '../shared/currency';
@@ -25,7 +27,7 @@ interface TopCat { name: string; amount: number; color: string; pct: number }
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [NgFor, NgIf, DatePipe, RouterLink, MatIconModule, InrPipe],
+  imports: [NgFor, NgIf, DatePipe, RouterLink, MatIconModule, InrPipe, QuickAddComponent],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.css'],
 })
@@ -49,6 +51,8 @@ export class DashboardComponent implements OnInit {
   recent: Tx[] = [];
   budgets: BudgetRow[] = [];
   tripCards: TripCard[] = [];
+  rawTxs: Transaction[] = [];
+  catList: Category[] = [];
   acctTotal: number | null = null;
   dues: { account: string; days: number; owed: number }[] = [];
   goalsLine = '';
@@ -70,6 +74,8 @@ export class DashboardComponent implements OnInit {
       this.db.getSetting<string>('lastBackup', ''),
       this.db.getSetting<number>('lastBackupCount', 0),
     ]);
+    this.rawTxs = txs;
+    this.catList = cats;
     this.all = txs.map(t => ({ ...t, t: new Date(t.date).getTime() }));
     cats.forEach(c => this.colors.set(c.name, c.color));
     this.hasAny = this.all.length > 0;

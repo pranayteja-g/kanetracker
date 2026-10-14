@@ -154,9 +154,14 @@ export class PeopleComponent implements OnInit {
   async remove(r: Row) {
     const used = this.txs.some(t => t.split!.paidBy === r.name || t.split!.with.includes(r.name));
     if (used || r.bal !== 0) { this.snack.open('Has split entries. Settle first; entries stay in History.', 'OK', { duration: 4000 }); if (r.bal === 0) { /* history-only person */ } return; }
-    await this.db.setSetting('people', this.people.filter(p => p !== r.name));
+    const before = this.people;
+    await this.db.setSetting('people', before.filter(p => p !== r.name));
     this.open = '';
     await this.load();
+    this.snack.open(`${r.name} removed`, 'Undo', { duration: 5000 }).onAction().subscribe(async () => {
+      await this.db.setSetting('people', before);
+      await this.load();
+    });
   }
 
   back() { history.length > 1 ? history.back() : this.router.navigate(['/settings']); }

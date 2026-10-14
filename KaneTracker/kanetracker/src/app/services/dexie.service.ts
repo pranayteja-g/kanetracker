@@ -496,6 +496,40 @@ export class DexieService extends Dexie {
     });
   }
 
+  /** Delete a trip and return a function that puts it and its expense links back. */
+  async deleteTripWithUndo(id: number): Promise<() => Promise<void>> {
+    const trip = await this.trips.get(id);
+    const ids = (await this.transactions.where('tripId').equals(id).primaryKeys()) as number[];
+    await this.deleteTrip(id);
+    return async () => {
+      if (!trip) return;
+      await this.transaction('rw', this.trips, this.transactions, async () => {
+        await this.trips.put(trip);
+        await this.transactions.where(':id').anyOf(ids).modify((t: Transaction) => { t.tripId = id; });
+      });
+    };
+  }
+
+  /** Edit many entries at once. Fields left undefined are untouched; '' / 0 clear account / trip. */
+  async bulkUpdate(ids: number[], patch: { category?: string; account?: string; tripId?: number; addTag?: string }): Promise<number> {
+    let n = 0;
+    await this.transactions.where(':id').anyOf(ids).modify((t: Transaction) => {
+      n++;
+      if (patch.category !== undefined) t.category = patch.category;
+      if (patch.account !== undefined) patch.account ? (t.account = patch.account) : delete t.account;
+      if (patch.tripId !== undefined) (patch.tripId && t.type === 'expense') ? (t.tripId = patch.tripId) : delete t.tripId;
+      if (patch.addTag) { const tags = new Set(t.tags || []); tags.add(patch.addTag); t.tags = [...tags]; }
+    });
+    return n;
+  }
+
+  /** Delete many entries; returns a function that puts them back. */
+  async deleteMany(ids: number[]): Promise<() => Promise<void>> {
+    const rows = await this.transactions.where(':id').anyOf(ids).toArray();
+    await this.transactions.bulkDelete(ids);
+    return async () => { await this.transactions.bulkPut(rows); };
+  }
+
   /** Copy a trip's plan to new dates (same length). Expenses are not copied. */
   async duplicateTrip(id: number, start: Date): Promise<number> {
     const t = await this.trips.get(id);
